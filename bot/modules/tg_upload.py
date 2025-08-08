@@ -3,7 +3,6 @@ import pathlib
 import subprocess
 import threading
 
-from telegram.error import BadRequest
 from telegram.ext import CommandHandler, run_async
 
 from bot import Interval, LOGGER
@@ -16,6 +15,8 @@ from bot.helper.mirror_utils.download_utils.telegram_downloader import TelegramD
 from bot.helper.mirror_utils.status_utils import listeners
 from bot.helper.mirror_utils.status_utils.extract_status import ExtractStatus
 from bot.helper.mirror_utils.status_utils.tar_status import TarStatus
+from bot.helper.mirror_utils.status_utils.upload_status import UploadStatus
+from bot.helper.mirror_utils.upload_utils.telegram_uploader import TelegramUploader
 from bot.helper.telegram_helper.bot_commands import BotCommands
 from bot.helper.telegram_helper.filters import CustomFilters
 from bot.helper.telegram_helper.message_utils import *
@@ -101,42 +102,17 @@ class TgUploadListener(listeners.MirrorListeners):
         else:
             name = pathlib.PurePath(path).name
 
-        # Upload to Telegram
-        try:
-            with open(path, 'rb') as file_stream:
-                self.bot.send_document(
-                    chat_id=self.update.effective_chat.id,
-                    document=file_stream,
-                    filename=name,
-                    reply_to_message_id=self.update.message.message_id
-                )
-        except BadRequest as e:
-            self.onUploadError(str(e))
-            return
-        except Exception as e:
-            self.onUploadError(str(e))
-            return
-
-        # Cleanup and notify
+        # Prepare Telegram uploader and status
+        if size == 0:
+            size = fs_utils.get_path_size(path)
+        uploader = TelegramUploader(name, self, self.update.effective_chat.id, self.update.message.message_id)
+        upload_status = UploadStatus(uploader, size, self)
         with download_dict_lock:
-            try:
-                fs_utils.clean_download(f'{DOWNLOAD_DIR}{self.uid}')
-            except FileNotFoundError:
-                pass
-            try:
-                del download_dict[self.uid]
-            except KeyError:
-                pass
-            count = len(download_dict)
+            download_dict[self.uid] = upload_status
+        update_all_messages()
 
-        msg = f"Uploaded to Telegram: {name}"
-        if self.tag is not None:
-            msg += f'\ncc: @{self.tag}'
-        sendMessage(msg, self.bot, self.update)
-        if count == 0:
-            self.clean()
-        else:
-            update_all_messages()
+        # Start upload (blocking until complete)
+        uploader.upload(path)
 
     def onDownloadError(self, error):
         error = error.replace('<', ' ').replace('>', ' ')
@@ -168,6 +144,26 @@ class TgUploadListener(listeners.MirrorListeners):
 
     def onUploadProgress(self):
         pass
+
+    def onUploadComplete(self, _link: str):
+        with download_dict_lock:
+            try:
+                fs_utils.clean_download(f'{DOWNLOAD_DIR}{self.uid}')
+            except FileNotFoundError:
+                pass
+            try:
+                del download_dict[self.uid]
+            except KeyError:
+                pass
+            count = len(download_dict)
+        msg = f"Uploaded to Telegram: {self.message.message_id}"
+        if self.tag is not None:
+            msg += f'\ncc: @{self.tag}'
+        sendMessage(msg, self.bot, self.update)
+        if count == 0:
+            self.clean()
+        else:
+            update_all_messages()
 
     def onUploadError(self, error):
         e_str = error.replace('<', '').replace('>', '')
