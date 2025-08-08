@@ -93,6 +93,8 @@ def bot_help(update, context):
 
 /{BotCommands.LogCommand}: Get a log file of the bot. Handy for getting crash reports
 
+/{BotCommands.TgUploadCommand} [download_url] (or reply to a file): Download and upload the file back to Telegram
+
 '''
     sendMessage(help_string, context.bot, update)
 
@@ -123,6 +125,9 @@ def main():
     dispatcher.add_handler(help_handler)
     dispatcher.add_handler(stats_handler)
     dispatcher.add_handler(log_handler)
+    # Register Telegram upload command handler
+    from .modules.tg_upload import tg_upload_handler
+    dispatcher.add_handler(tg_upload_handler)
     updater.start_polling()
     LOGGER.info("Bot Started!")
     signal.signal(signal.SIGINT, fs_utils.exit_clean_up)

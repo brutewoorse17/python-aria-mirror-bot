@@ -18,5 +18,7 @@ class _BotCommands:
         self.CloneCommand = "clone"
         self.WatchCommand = 'watch'
         self.TarWatchCommand = 'tarwatch'
+        # Added Telegram upload command
+        self.TgUploadCommand = 'tgupload'
 
 BotCommands = _BotCommands()
