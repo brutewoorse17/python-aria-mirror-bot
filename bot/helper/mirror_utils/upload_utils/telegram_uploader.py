@@ -3,8 +3,7 @@ import threading
 import time
 
 from pyrogram import Client
-from bot import LOGGER, TELEGRAM_API, TELEGRAM_HASH, USER_SESSION_STRING, bot
-from bot.helper.ext_utils.bot_utils import should_update_status, get_readable_file_size, get_readable_time
+from bot import LOGGER, TELEGRAM_API, TELEGRAM_HASH, USER_SESSION_STRING
 
 logging.getLogger("pyrogram").setLevel(logging.WARNING)
 
@@ -24,7 +23,6 @@ class TelegramUploader:
         self.__size = 0
         self.__start_time = None
         self.is_cancelled = False
-        self._status_message = None
 
     def cancel(self):
         self.is_cancelled = True
@@ -39,16 +37,6 @@ class TelegramUploader:
         except ZeroDivisionError:
             return 0
 
-    def __format_status(self) -> str:
-        percent = 0 if self.__size == 0 else self.uploaded_bytes * 100 / max(1, self.__size)
-        try:
-            eta_secs = (self.__size - self.uploaded_bytes) / max(1e-3, self.speed())
-        except ZeroDivisionError:
-            eta_secs = 0
-        return (f"Uploading {self.name}\n"
-                f"{round(percent, 2)}% of {get_readable_file_size(self.__size)} "
-                f"at {get_readable_file_size(self.speed())}/s, ETA: {get_readable_time(int(eta_secs))}")
-
     def __on_progress(self, current, total):
         if self.is_cancelled:
             self.__listener.onUploadError('Cancelled by user!')
@@ -59,20 +47,6 @@ class TelegramUploader:
             return
         self.uploaded_bytes = current
         self.__size = total
-        if should_update_status(2.0):
-            try:
-                if self._status_message is None:
-                    self._status_message = bot.send_message(self.__chat_id,
-                                                             reply_to_message_id=self.__reply_to_message_id,
-                                                             text=self.__format_status(),
-                                                             parse_mode='HTML')
-                else:
-                    bot.edit_message_text(text=self.__format_status(),
-                                          chat_id=self._status_message.chat.id,
-                                          message_id=self._status_message.message_id,
-                                          parse_mode='HTML')
-            except Exception:
-                pass
 
     def upload(self, file_path):
         try:
@@ -88,15 +62,6 @@ class TelegramUploader:
             )
             if self.is_cancelled:
                 return None
-            # Clear status message if present
-            try:
-                if self._status_message is not None:
-                    bot.edit_message_text(text=f"Uploaded to Telegram: {self.name}",
-                                          chat_id=self._status_message.chat.id,
-                                          message_id=self._status_message.message_id,
-                                          parse_mode='HTML')
-            except Exception:
-                pass
             self.__listener.onUploadComplete('')
             return True
         except Exception as e:
