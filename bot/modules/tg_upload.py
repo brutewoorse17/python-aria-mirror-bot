@@ -157,7 +157,7 @@ class TgUploadListener(listeners.MirrorListeners):
             except KeyError:
                 pass
             count = len(download_dict)
-        msg = f"Uploaded to Telegram: {self.message.message_id}"
+        msg = f"Uploaded to Telegram: {name}"
         if self.tag is not None:
             msg += f'\ncc: @{self.tag}'
         from bot.helper.telegram_helper.message_utils import send_message_async
@@ -175,7 +175,7 @@ class TgUploadListener(listeners.MirrorListeners):
             except FileNotFoundError:
                 pass
             try:
-                del download_dict[self.message.message_id]
+                del download_dict[self.uid]
             except KeyError:
                 pass
             count = len(download_dict)
