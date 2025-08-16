@@ -6,39 +6,51 @@ from bot import AUTO_DELETE_MESSAGE_DURATION, LOGGER, bot, \
 from bot.helper.ext_utils.bot_utils import get_readable_message
 from telegram.error import TimedOut, BadRequest
 from bot import bot
+from bot import application
 
 
-def sendMessage(text: str, bot, update: Update):
+async def sendMessage(text: str, context):
     try:
-        return bot.send_message(update.message.chat_id,
-                            reply_to_message_id=update.message.message_id,
+        return await context.bot.send_message(context._update.effective_chat.id,
+                            reply_to_message_id=context._update.effective_message.message_id,
                             text=text, parse_mode='HTMl')
     except Exception as e:
         LOGGER.error(str(e))
 
 
-def editMessage(text: str, message: Message):
+async def editMessage(text: str, message: Message, context):
     try:
-        bot.edit_message_text(text=text, message_id=message.message_id,
+        await context.bot.edit_message_text(text=text, message_id=message.message_id,
                               chat_id=message.chat.id,
                               parse_mode='HTMl')
     except Exception as e:
         LOGGER.error(str(e))
 
 
-def deleteMessage(bot, message: Message):
+async def deleteMessage(context, message: Message):
     try:
-        bot.delete_message(chat_id=message.chat.id,
+        await context.bot.delete_message(chat_id=message.chat.id,
                            message_id=message.message_id)
     except Exception as e:
         LOGGER.error(str(e))
 
 
-def sendLogFile(bot, update: Update):
+async def sendLogFile(context):
     with open('log.txt', 'rb') as f:
-        bot.send_document(document=f, filename=f.name,
-                          reply_to_message_id=update.message.message_id,
-                          chat_id=update.message.chat_id)
+        await context.bot.send_document(document=f, filename=f.name,
+                          reply_to_message_id=context._update.effective_message.message_id,
+                          chat_id=context._update.effective_chat.id)
+
+
+async def _async_send_message(chat_id, reply_to_message_id, text, parse_mode='HTMl'):
+    try:
+        await application.bot.send_message(chat_id, reply_to_message_id=reply_to_message_id, text=text, parse_mode=parse_mode)
+    except Exception as e:
+        LOGGER.error(str(e))
+
+
+def send_message_async(chat_id, reply_to_message_id, text, parse_mode='HTMl'):
+    application.create_task(_async_send_message(chat_id, reply_to_message_id, text, parse_mode))
 
 
 def auto_delete_message(bot, cmd_message: Message, bot_message: Message):
@@ -56,7 +68,9 @@ def delete_all_messages():
     with status_reply_dict_lock:
         for message in list(status_reply_dict.values()):
             try:
-                deleteMessage(bot, message)
+                # In async flow we cannot await here; relying on older sync bot for cleanup
+                bot.delete_message(chat_id=message.chat.id,
+                                   message_id=message.message_id)
                 del status_reply_dict[message.chat.id]
             except Exception as e:
                 LOGGER.error(str(e))
@@ -68,22 +82,24 @@ def update_all_messages():
         for chat_id in list(status_reply_dict.keys()):
             if status_reply_dict[chat_id] and msg != status_reply_dict[chat_id].text:
                 try:
-                    editMessage(msg, status_reply_dict[chat_id])
+                    bot.edit_message_text(text=msg, message_id=status_reply_dict[chat_id].message_id,
+                                          chat_id=status_reply_dict[chat_id].chat.id,
+                                          parse_mode='HTMl')
                 except Exception as e:
                     LOGGER.error(str(e))
                 status_reply_dict[chat_id].text = msg
 
 
-def sendStatusMessage(msg, bot):
+async def sendStatusMessage(msg, context):
     progress = get_readable_message()
     with status_reply_dict_lock:
         if msg.message.chat.id in list(status_reply_dict.keys()):
             try:
                 message = status_reply_dict[msg.message.chat.id]
-                deleteMessage(bot, message)
+                await deleteMessage(context, message)
                 del status_reply_dict[msg.message.chat.id]
             except Exception as e:
                 LOGGER.error(str(e))
                 del status_reply_dict[msg.message.chat.id]
-        message = sendMessage(progress, bot, msg)
+        message = await sendMessage(progress, context)
         status_reply_dict[msg.message.chat.id] = message

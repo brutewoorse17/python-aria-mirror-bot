@@ -1,6 +1,6 @@
 from .download_helper import DownloadHelper
 import time
-from youtube_dl import YoutubeDL, DownloadError
+from yt_dlp import YoutubeDL, DownloadError
 from bot import download_dict_lock, download_dict
 from ..status_utils.youtube_dl_download_status import YoutubeDLDownloadStatus
 import logging
@@ -146,7 +146,7 @@ class YoutubeDLHelper(DownloadHelper):
             self.onDownloadError("Download Cancelled by User!")
 
     def add_download(self, link, path, qual):
-        pattern = '^.*(youtu\.be\/|youtube.com\/)(playlist?)'
+        pattern = r'^.*(youtu\.be/|youtube\.com/)(playlist?)'
         if re.match(pattern, link):
             self.opts['ignoreerrors'] = True
         self.__onDownloadStart()

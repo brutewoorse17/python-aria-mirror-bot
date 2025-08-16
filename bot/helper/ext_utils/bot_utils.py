@@ -20,6 +20,7 @@ class MirrorStatus:
     STATUS_CANCELLED = "Cancelled"
     STATUS_ARCHIVING = "Archiving"
     STATUS_EXTRACTING = "Extracting"
+    STATUS_SPLITTING = "Splitting"
 
 
 PROGRESS_MAX_SIZE = 100 // 8
@@ -44,6 +45,17 @@ class setInterval:
 
     def cancel(self):
         self.stopEvent.set()
+
+
+_last_status_update_time = 0.0
+
+def should_update_status(min_interval_seconds: float = 2.0) -> bool:
+    global _last_status_update_time
+    now = time.time()
+    if now - _last_status_update_time >= min_interval_seconds:
+        _last_status_update_time = now
+        return True
+    return False
 
 
 def get_readable_file_size(size_in_bytes) -> str:

@@ -1,6 +1,6 @@
-from telegram.ext import CommandHandler, run_async
+from telegram.ext import CommandHandler
 from telegram import Bot, Update
-from bot import Interval, DOWNLOAD_DIR, DOWNLOAD_STATUS_UPDATE_INTERVAL, dispatcher, LOGGER
+from bot import Interval, DOWNLOAD_DIR, DOWNLOAD_STATUS_UPDATE_INTERVAL, application, LOGGER
 from bot.helper.ext_utils.bot_utils import setInterval
 from bot.helper.telegram_helper.message_utils import update_all_messages, sendMessage, sendStatusMessage
 from .mirror import MirrorListener
@@ -16,7 +16,9 @@ def _watch(bot: Bot, update: Update, args: list, isTar=False):
     except IndexError:
         msg = f"/{BotCommands.WatchCommand} [yt_dl supported link] [quality] to mirror with youtube_dl.\n\n"
         msg += "Example of quality :- audio, 144, 360, 720, 1080.\nNote :- Quality is optional"
-        sendMessage(msg, bot, update)
+        # Legacy sync util used here
+        from bot.helper.telegram_helper.message_utils import bot as sync_bot
+        sync_bot.send_message(update.effective_chat.id, reply_to_message_id=update.message.message_id, text=msg, parse_mode='HTML')
         return
     try:
       qual = args[1]
@@ -33,13 +35,13 @@ def _watch(bot: Bot, update: Update, args: list, isTar=False):
     listener = MirrorListener(bot, update, isTar, tag)
     ydl = YoutubeDLHelper(listener)
     threading.Thread(target=ydl.add_download,args=(link, f'{DOWNLOAD_DIR}{listener.uid}', qual)).start()
-    sendStatusMessage(update, bot)
+    from bot.helper.telegram_helper.message_utils import bot as sync_bot
+    sync_bot.send_message(update.effective_chat.id, reply_to_message_id=update.message.message_id, text="Starting...")
     if len(Interval) == 0:
         Interval.append(setInterval(DOWNLOAD_STATUS_UPDATE_INTERVAL, update_all_messages))
 
 
-@run_async
-def watchTar(update, context):
+async def watchTar(update, context):
     _watch(context.bot, update, context.args, True)
 
 
@@ -48,10 +50,8 @@ def watch(update, context):
 
 
 mirror_handler = CommandHandler(BotCommands.WatchCommand, watch,
-                                pass_args=True,
                                 filters=CustomFilters.authorized_chat | CustomFilters.authorized_user)
 tar_mirror_handler = CommandHandler(BotCommands.TarWatchCommand, watchTar,
-                                    pass_args=True,
                                     filters=CustomFilters.authorized_chat | CustomFilters.authorized_user)
-dispatcher.add_handler(mirror_handler)
-dispatcher.add_handler(tar_mirror_handler)
+application.add_handler(mirror_handler)
+application.add_handler(tar_mirror_handler)

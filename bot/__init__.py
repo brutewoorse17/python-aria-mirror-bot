@@ -3,8 +3,8 @@ import logging
 import os
 import threading
 import time
-import aria2p
-import telegram.ext as tg
+from bot.helper.mirror_utils.download_utils.aioaria2_adapter import AioAria2API
+from telegram.ext import Application
 from dotenv import load_dotenv
 import socket
 from megasdkrestclient import MegaSdkRestClient, errors as mega_err
@@ -40,16 +40,17 @@ try:
 except KeyError:
     pass
 
-aria2 = aria2p.API(
-    aria2p.Client(
-        host="http://localhost",
-        port=6800,
-        secret="",
-    )
+aria2 = AioAria2API(
+	"http://localhost:6800/jsonrpc",
+	token=""
 )
 
 DOWNLOAD_DIR = None
 BOT_TOKEN = None
+
+# Shared state
+application = None
+bot = None
 
 download_dict_lock = threading.Lock()
 status_reply_dict_lock = threading.Lock()
@@ -126,6 +127,30 @@ try:
 except KeyError:
     INDEX_URL = None
 try:
+    UPLOAD_AS_VIDEO = getConfig('UPLOAD_AS_VIDEO')
+    if isinstance(UPLOAD_AS_VIDEO, str):
+        UPLOAD_AS_VIDEO = True if UPLOAD_AS_VIDEO.lower() == 'true' else False
+except KeyError:
+    UPLOAD_AS_VIDEO = False
+try:
+    VIDEO_THUMB_PATH = getConfig('VIDEO_THUMB_PATH')
+    if len(VIDEO_THUMB_PATH) == 0:
+        VIDEO_THUMB_PATH = None
+except KeyError:
+    VIDEO_THUMB_PATH = None
+try:
+    USE_CUSTOM_THUMB = getConfig('USE_CUSTOM_THUMB')
+    if isinstance(USE_CUSTOM_THUMB, str):
+        USE_CUSTOM_THUMB = True if USE_CUSTOM_THUMB.lower() == 'true' else False
+except KeyError:
+    USE_CUSTOM_THUMB = False
+try:
+    TG_PART_SIZE_MB = int(getConfig('TG_PART_SIZE_MB'))
+    if TG_PART_SIZE_MB <= 0:
+        TG_PART_SIZE_MB = 1950
+except KeyError:
+    TG_PART_SIZE_MB = 1950
+try:
     IS_TEAM_DRIVE = getConfig('IS_TEAM_DRIVE')
     if IS_TEAM_DRIVE.lower() == 'true':
         IS_TEAM_DRIVE = True
@@ -143,7 +168,8 @@ try:
 except KeyError:
     USE_SERVICE_ACCOUNTS = False
 
-updater = tg.Updater(token=BOT_TOKEN,use_context=True)
-bot = updater.bot
-dispatcher = updater.dispatcher
+# Build Application and bot
+application = Application.builder().token(BOT_TOKEN).build()
+bot = application.bot
+
 redis_thread.join()

@@ -3,10 +3,10 @@ import pathlib
 import subprocess
 import threading
 
-from telegram.ext import CommandHandler, run_async
+from telegram.ext import CommandHandler
 
 from bot import Interval, LOGGER
-from bot import dispatcher, DOWNLOAD_DIR, DOWNLOAD_STATUS_UPDATE_INTERVAL, download_dict, download_dict_lock
+from bot import application, DOWNLOAD_DIR, DOWNLOAD_STATUS_UPDATE_INTERVAL, download_dict, download_dict_lock
 from bot.helper.ext_utils import fs_utils, bot_utils
 from bot.helper.ext_utils.bot_utils import setInterval
 from bot.helper.ext_utils.exceptions import NotSupportedExtractionArchive
@@ -133,7 +133,8 @@ class TgUploadListener(listeners.MirrorListeners):
         else:
             uname = f'<a href="tg://user?id={self.message.from_user.id}">{self.message.from_user.first_name}</a>'
         msg = f"{uname} your download has been stopped due to: {error}"
-        sendMessage(msg, self.bot, self.update)
+        from bot.helper.telegram_helper.message_utils import send_message_async
+        send_message_async(self.update.effective_chat.id, self.update.message.message_id, msg, parse_mode='HTML')
         if count == 0:
             self.clean()
         else:
@@ -156,10 +157,11 @@ class TgUploadListener(listeners.MirrorListeners):
             except KeyError:
                 pass
             count = len(download_dict)
-        msg = f"Uploaded to Telegram: {self.message.message_id}"
+        msg = f"Uploaded to Telegram: {name}"
         if self.tag is not None:
             msg += f'\ncc: @{self.tag}'
-        sendMessage(msg, self.bot, self.update)
+        from bot.helper.telegram_helper.message_utils import send_message_async
+        send_message_async(self.update.effective_chat.id, self.update.message.message_id, msg, parse_mode='HTML')
         if count == 0:
             self.clean()
         else:
@@ -173,18 +175,19 @@ class TgUploadListener(listeners.MirrorListeners):
             except FileNotFoundError:
                 pass
             try:
-                del download_dict[self.message.message_id]
+                del download_dict[self.uid]
             except KeyError:
                 pass
             count = len(download_dict)
-        sendMessage(e_str, self.bot, self.update)
+        from bot.helper.telegram_helper.message_utils import send_message_async
+        send_message_async(self.update.effective_chat.id, self.update.message.message_id, e_str, parse_mode='HTML')
         if count == 0:
             self.clean()
         else:
             update_all_messages()
 
 
-def _tgupload(bot, update, isTar=False, extract=False):
+async def tgupload(update, context):
     message_args = update.message.text.split(' ')
     try:
         link = message_args[1]
@@ -204,10 +207,10 @@ def _tgupload(bot, update, isTar=False, extract=False):
         if len(link) == 0:
             if file is not None:
                 if file.mime_type != "application/x-bittorrent":
-                    listener = TgUploadListener(bot, update, isTar, tag, extract)
+                    listener = TgUploadListener(context.bot, update, False, tag, False)
                     tg_downloader = TelegramDownloadHelper(listener)
                     tg_downloader.add_download(reply_to, f'{DOWNLOAD_DIR}{listener.uid}/')
-                    sendStatusMessage(update, bot)
+                    await sendStatusMessage(update, context)
                     if len(Interval) == 0:
                         Interval.append(setInterval(DOWNLOAD_STATUS_UPDATE_INTERVAL, update_all_messages))
                     return
@@ -216,20 +219,16 @@ def _tgupload(bot, update, isTar=False, extract=False):
     else:
         tag = None
     if not bot_utils.is_url(link) and not bot_utils.is_magnet(link):
-        sendMessage('No download source provided', bot, update)
+        await sendMessage('No download source provided', context)
         return
 
-    listener = TgUploadListener(bot, update, isTar, tag, extract)
+    listener = TgUploadListener(context.bot, update, False, tag, False)
     ariaDlManager.add_download(link, f'{DOWNLOAD_DIR}{listener.uid}/', listener)
-    sendStatusMessage(update, bot)
+    await sendStatusMessage(update, context)
     if len(Interval) == 0:
         Interval.append(setInterval(DOWNLOAD_STATUS_UPDATE_INTERVAL, update_all_messages))
 
 
-@run_async
-def tgupload(update, context):
-    _tgupload(context.bot, update)
-
-
 tg_upload_handler = CommandHandler(BotCommands.TgUploadCommand, tgupload,
                                    filters=CustomFilters.authorized_chat | CustomFilters.authorized_user)
+application.add_handler(tg_upload_handler)
