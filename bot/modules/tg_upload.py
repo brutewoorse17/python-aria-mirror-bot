@@ -133,10 +133,8 @@ class TgUploadListener(listeners.MirrorListeners):
         else:
             uname = f'<a href="tg://user?id={self.message.from_user.id}">{self.message.from_user.first_name}</a>'
         msg = f"{uname} your download has been stopped due to: {error}"
-        try:
-            self.bot.send_message(self.update.effective_chat.id, reply_to_message_id=self.update.message.message_id, text=msg, parse_mode='HTML')
-        except Exception:
-            pass
+        from bot.helper.telegram_helper.message_utils import send_message_async
+        send_message_async(self.update.effective_chat.id, self.update.message.message_id, msg, parse_mode='HTML')
         if count == 0:
             self.clean()
         else:
@@ -162,10 +160,8 @@ class TgUploadListener(listeners.MirrorListeners):
         msg = f"Uploaded to Telegram: {self.message.message_id}"
         if self.tag is not None:
             msg += f'\ncc: @{self.tag}'
-        try:
-            self.bot.send_message(self.update.effective_chat.id, reply_to_message_id=self.update.message.message_id, text=msg, parse_mode='HTML')
-        except Exception:
-            pass
+        from bot.helper.telegram_helper.message_utils import send_message_async
+        send_message_async(self.update.effective_chat.id, self.update.message.message_id, msg, parse_mode='HTML')
         if count == 0:
             self.clean()
         else:
@@ -183,10 +179,8 @@ class TgUploadListener(listeners.MirrorListeners):
             except KeyError:
                 pass
             count = len(download_dict)
-        try:
-            self.bot.send_message(self.update.effective_chat.id, reply_to_message_id=self.update.message.message_id, text=e_str, parse_mode='HTML')
-        except Exception:
-            pass
+        from bot.helper.telegram_helper.message_utils import send_message_async
+        send_message_async(self.update.effective_chat.id, self.update.message.message_id, e_str, parse_mode='HTML')
         if count == 0:
             self.clean()
         else:

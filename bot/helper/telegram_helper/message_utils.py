@@ -6,6 +6,7 @@ from bot import AUTO_DELETE_MESSAGE_DURATION, LOGGER, bot, \
 from bot.helper.ext_utils.bot_utils import get_readable_message
 from telegram.error import TimedOut, BadRequest
 from bot import bot
+from bot import application
 
 
 async def sendMessage(text: str, context):
@@ -39,6 +40,17 @@ async def sendLogFile(context):
         await context.bot.send_document(document=f, filename=f.name,
                           reply_to_message_id=context._update.effective_message.message_id,
                           chat_id=context._update.effective_chat.id)
+
+
+async def _async_send_message(chat_id, reply_to_message_id, text, parse_mode='HTMl'):
+    try:
+        await application.bot.send_message(chat_id, reply_to_message_id=reply_to_message_id, text=text, parse_mode=parse_mode)
+    except Exception as e:
+        LOGGER.error(str(e))
+
+
+def send_message_async(chat_id, reply_to_message_id, text, parse_mode='HTMl'):
+    application.create_task(_async_send_message(chat_id, reply_to_message_id, text, parse_mode))
 
 
 def auto_delete_message(bot, cmd_message: Message, bot_message: Message):
