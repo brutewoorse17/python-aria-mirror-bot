@@ -1,15 +1,12 @@
 from bot.helper.telegram_helper.message_utils import sendMessage
-from telegram.ext import run_async
-from bot import AUTHORIZED_CHATS, dispatcher
+from bot import AUTHORIZED_CHATS, application
 from telegram.ext import CommandHandler
 from bot.helper.telegram_helper.filters import CustomFilters
-from telegram.ext import Filters
 from telegram import Update
 from bot.helper.telegram_helper.bot_commands import BotCommands
 from bot import redis_client, redis_authorised_chats_key
 
-@run_async
-def authorize(update,context):
+async def authorize(update,context):
     reply_message = update.message.reply_to_message
     msg = ''
     if reply_message is None:
@@ -30,11 +27,10 @@ def authorize(update,context):
             msg = 'Person Authorized to use the bot!'
         else:
             msg = 'Person already authorized'
-    sendMessage(msg, context.bot, update)
+    await sendMessage(msg, context)
 
 
-@run_async
-def unauthorize(update,context):
+async def unauthorize(update,context):
     reply_message = update.message.reply_to_message
     if reply_message is None:
         # Trying to unauthorize a chat
@@ -55,13 +51,13 @@ def unauthorize(update,context):
         else:
             msg = 'Person already unauthorized!'
         
-    sendMessage(msg, context.bot, update)
+    await sendMessage(msg, context)
 
 
 authorize_handler = CommandHandler(command=BotCommands.AuthorizeCommand, callback=authorize,
-                                   filters=CustomFilters.owner_filter & Filters.group)
+                                   filters=CustomFilters.owner_filter & CustomFilters.authorized_chat)
 unauthorize_handler = CommandHandler(command=BotCommands.UnAuthorizeCommand, callback=unauthorize,
-                                     filters=CustomFilters.owner_filter & Filters.group)
-dispatcher.add_handler(authorize_handler)
-dispatcher.add_handler(unauthorize_handler)
+                                     filters=CustomFilters.owner_filter & CustomFilters.authorized_chat)
+application.add_handler(authorize_handler)
+application.add_handler(unauthorize_handler)
 

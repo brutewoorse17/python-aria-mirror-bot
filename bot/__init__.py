@@ -4,7 +4,7 @@ import os
 import threading
 import time
 from bot.helper.mirror_utils.download_utils.aioaria2_adapter import AioAria2API
-import telegram.ext as tg
+from telegram.ext import Application
 from dotenv import load_dotenv
 import socket
 from megasdkrestclient import MegaSdkRestClient, errors as mega_err
@@ -47,6 +47,10 @@ aria2 = AioAria2API(
 
 DOWNLOAD_DIR = None
 BOT_TOKEN = None
+
+# Shared state
+application = None
+bot = None
 
 download_dict_lock = threading.Lock()
 status_reply_dict_lock = threading.Lock()
@@ -140,7 +144,8 @@ try:
 except KeyError:
     USE_SERVICE_ACCOUNTS = False
 
-updater = tg.Updater(token=BOT_TOKEN,use_context=True)
-bot = updater.bot
-dispatcher = updater.dispatcher
+# Build Application and bot
+application = Application.builder().token(BOT_TOKEN).build()
+bot = application.bot
+
 redis_thread.join()
