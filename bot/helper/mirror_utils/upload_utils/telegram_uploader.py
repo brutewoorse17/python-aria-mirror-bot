@@ -3,7 +3,6 @@ import threading
 import time
 
 from pyrogram import Client
-
 from bot import LOGGER, TELEGRAM_API, TELEGRAM_HASH, USER_SESSION_STRING
 
 logging.getLogger("pyrogram").setLevel(logging.WARNING)
@@ -15,9 +14,10 @@ class TelegramUploader:
         self.__listener = listener
         self.__chat_id = chat_id
         self.__reply_to_message_id = reply_to_message_id
-        self.__user_bot = Client(api_id=TELEGRAM_API,
+        self.__user_bot = Client(':memory:',
+                                 api_id=TELEGRAM_API,
                                  api_hash=TELEGRAM_HASH,
-                                 session_name=USER_SESSION_STRING)
+                                 session_string=USER_SESSION_STRING)
         self.__user_bot.start()
         self.uploaded_bytes = 0
         self.__size = 0

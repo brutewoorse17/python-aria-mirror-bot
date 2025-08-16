@@ -3,7 +3,6 @@ import threading
 import time
 
 from pyrogram import Client
-
 from bot import LOGGER, download_dict, download_dict_lock, TELEGRAM_API, \
     TELEGRAM_HASH, USER_SESSION_STRING
 from .download_helper import DownloadHelper
@@ -23,9 +22,10 @@ class TelegramDownloadHelper(DownloadHelper):
         self.__name = ""
         self.__gid = ''
         self.__start_time = time.time()
-        self.__user_bot = Client(api_id=TELEGRAM_API,
+        self.__user_bot = Client(':memory:',
+                                 api_id=TELEGRAM_API,
                                  api_hash=TELEGRAM_HASH,
-                                 session_name=USER_SESSION_STRING)
+                                 session_string=USER_SESSION_STRING)
         self.__user_bot.start()
         self.__is_cancelled = False
 
@@ -53,7 +53,10 @@ class TelegramDownloadHelper(DownloadHelper):
     def __onDownloadProgress(self, current, total):
         if self.__is_cancelled:
             self.__onDownloadError('Cancelled by user!')
-            self.__user_bot.stop_transmission()
+            try:
+                self.__user_bot.stop_transmission()
+            except Exception:
+                pass
             return
         with self.__resource_lock:
             self.downloaded_bytes = current
