@@ -20,6 +20,7 @@ class MirrorStatus:
     STATUS_CANCELLED = "Cancelled"
     STATUS_ARCHIVING = "Archiving"
     STATUS_EXTRACTING = "Extracting"
+    STATUS_SPLITTING = "Splitting"
 
 
 PROGRESS_MAX_SIZE = 100 // 8

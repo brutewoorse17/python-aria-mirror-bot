@@ -45,6 +45,7 @@ class TelegramUploader:
         self.__size = 0
         self.__start_time = None
         self.is_cancelled = False
+        self.is_splitting = False
 
     def cancel(self):
         self.is_cancelled = True
@@ -105,6 +106,7 @@ class TelegramUploader:
                 self.__send_one(file_path, self.name)
             else:
                 # split into parts and send sequentially
+                self.is_splitting = True
                 base, ext = os.path.splitext(self.name)
                 num_parts = (file_size + part_size - 1) // part_size
                 with open(file_path, 'rb') as f:
@@ -129,6 +131,7 @@ class TelegramUploader:
                             except Exception:
                                 pass
                         idx += 1
+                self.is_splitting = False
                 # adjust uploaded bytes for status correctness
                 self.uploaded_bytes = file_size
                 self.__size = file_size

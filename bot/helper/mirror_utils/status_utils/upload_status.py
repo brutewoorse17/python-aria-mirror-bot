@@ -23,6 +23,9 @@ class UploadStatus(Status):
         return get_readable_file_size(self.__size)
 
     def status(self):
+        # If uploader indicates splitting state, surface it
+        if getattr(self.obj, 'is_splitting', False):
+            return MirrorStatus.STATUS_SPLITTING
         return MirrorStatus.STATUS_UPLOADING
 
     def name(self):
