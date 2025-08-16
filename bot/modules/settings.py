@@ -14,6 +14,7 @@ def _settings_text() -> str:
 		f"Status Update Interval: <code>{bot.DOWNLOAD_STATUS_UPDATE_INTERVAL}s</code>\n"
 		f"Auto Delete Duration: <code>{bot.AUTO_DELETE_MESSAGE_DURATION}</code> (−1 disables)\n"
 		f"Index URL: <code>{index_url}</code>\n"
+		f"Upload as Video: <code>{bot.UPLOAD_AS_VIDEO}</code>\n"
 	)
 
 
@@ -40,6 +41,12 @@ def _settings_keyboard() -> InlineKeyboardMarkup:
 				"Disable" if bot.AUTO_DELETE_MESSAGE_DURATION != -1 else "Enable",
 				callback_data="settings:ad_toggle",
 			),
+		],
+		[
+			InlineKeyboardButton(
+				f"Upload as Video: {'ON' if bot.UPLOAD_AS_VIDEO else 'OFF'}",
+				callback_data="settings:toggle_upload_video",
+			)
 		],
 		[
 			InlineKeyboardButton("Refresh", callback_data="settings:refresh"),
@@ -87,6 +94,8 @@ async def settings_callback(update, context):
 				bot.AUTO_DELETE_MESSAGE_DURATION = max(0, bot.AUTO_DELETE_MESSAGE_DURATION - 5)
 		elif data == "settings:ad_toggle":
 			bot.AUTO_DELETE_MESSAGE_DURATION = -1 if bot.AUTO_DELETE_MESSAGE_DURATION != -1 else 20
+		elif data == "settings:toggle_upload_video":
+			bot.UPLOAD_AS_VIDEO = not bot.UPLOAD_AS_VIDEO
 		# refresh or after any change
 		await query.edit_message_text(
 			text=_settings_text(), parse_mode='HTML', reply_markup=_settings_keyboard()

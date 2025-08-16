@@ -127,6 +127,12 @@ try:
 except KeyError:
     INDEX_URL = None
 try:
+    UPLOAD_AS_VIDEO = getConfig('UPLOAD_AS_VIDEO')
+    if isinstance(UPLOAD_AS_VIDEO, str):
+        UPLOAD_AS_VIDEO = True if UPLOAD_AS_VIDEO.lower() == 'true' else False
+except KeyError:
+    UPLOAD_AS_VIDEO = False
+try:
     IS_TEAM_DRIVE = getConfig('IS_TEAM_DRIVE')
     if IS_TEAM_DRIVE.lower() == 'true':
         IS_TEAM_DRIVE = True

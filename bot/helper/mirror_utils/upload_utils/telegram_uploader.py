@@ -3,7 +3,7 @@ import threading
 import time
 
 from pyrogram import Client
-from bot import LOGGER, TELEGRAM_API, TELEGRAM_HASH, USER_SESSION_STRING
+from bot import LOGGER, TELEGRAM_API, TELEGRAM_HASH, USER_SESSION_STRING, UPLOAD_AS_VIDEO
 
 logging.getLogger("pyrogram").setLevel(logging.WARNING)
 
@@ -52,14 +52,25 @@ class TelegramUploader:
         try:
             self.__start_time = time.time()
             LOGGER.info(f"Uploading to Telegram: {file_path}")
-            self.__user_bot.send_document(
-                chat_id=self.__chat_id,
-                document=file_path,
-                file_name=self.name,
-                progress=self.__on_progress,
-                progress_args=(),
-                reply_to_message_id=self.__reply_to_message_id
-            )
+            if UPLOAD_AS_VIDEO and (self.name.lower().endswith('.mp4') or self.name.lower().endswith('.mkv')):
+                self.__user_bot.send_video(
+                    chat_id=self.__chat_id,
+                    video=file_path,
+                    file_name=self.name,
+                    supports_streaming=True,
+                    progress=self.__on_progress,
+                    progress_args=(),
+                    reply_to_message_id=self.__reply_to_message_id
+                )
+            else:
+                self.__user_bot.send_document(
+                    chat_id=self.__chat_id,
+                    document=file_path,
+                    file_name=self.name,
+                    progress=self.__on_progress,
+                    progress_args=(),
+                    reply_to_message_id=self.__reply_to_message_id
+                )
             if self.is_cancelled:
                 return None
             self.__listener.onUploadComplete('')
