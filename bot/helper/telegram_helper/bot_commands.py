@@ -20,5 +20,7 @@ class _BotCommands:
         self.TarWatchCommand = 'tarwatch'
         # Added Telegram upload command
         self.TgUploadCommand = 'tgupload'
+        self.MegaJDownloaderCommand = 'megajd'
+        self.MegaJDownloaderStatusCommand = 'megajdstatus'
 
 BotCommands = _BotCommands()
