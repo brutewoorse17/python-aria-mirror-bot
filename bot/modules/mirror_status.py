@@ -1,5 +1,5 @@
 from telegram.ext import CommandHandler
-from bot import application, status_reply_dict, DOWNLOAD_STATUS_UPDATE_INTERVAL, status_reply_dict_lock
+from bot import application, status_reply_dict, DOWNLOAD_STATUS_UPDATE_INTERVAL, status_reply_dict_lock, bot
 from bot.helper.telegram_helper.message_utils import *
 from time import sleep
 from bot.helper.ext_utils.bot_utils import get_readable_message
@@ -13,14 +13,16 @@ async def mirror_status(update,context):
     if len(message) == 0:
         message = "No active downloads"
         reply_message = await sendMessage(message, context)
-        # Note: auto-delete remains sync due to thread sleep
         threading.Thread(target=auto_delete_message, args=(bot, update.message, reply_message)).start()
         return
     index = update.effective_chat.id
     with status_reply_dict_lock:
         if index in status_reply_dict.keys():
-            # Use sync deletion to avoid awaiting in lock
-            deleteMessage(bot, status_reply_dict[index])
+            try:
+                bot.delete_message(chat_id=status_reply_dict[index].chat.id,
+                                   message_id=status_reply_dict[index].message_id)
+            except Exception:
+                pass
             del status_reply_dict[index]
     await sendStatusMessage(update,context)
     await deleteMessage(context,update.message)

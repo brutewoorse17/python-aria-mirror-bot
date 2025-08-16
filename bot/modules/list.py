@@ -7,15 +7,21 @@ from bot.helper.mirror_utils.upload_utils.gdriveTools import GoogleDriveHelper
 from telegram.ext import CommandHandler
 
 
-def list_drive(update, context):
+async def list_drive(update, context):
     args = update.message.text.split(' ')
-    search = ' '.join(args[1:])
+    search = ' '.join(args[1:]).strip()
+    if not search:
+        reply_message = await sendMessage('No search term provided', context)
+        threading.Thread(target=auto_delete_message, args=(context.bot, update.message, reply_message)).start()
+        return
+    LOGGER.info(f"Searching: {search}")
     gdrive = GoogleDriveHelper()
     msg = gdrive.drive_list(search)
     if msg:
-        reply_message = threading.get_native_id()  # placeholder to satisfy type; will be replaced
+        reply_message = await sendMessage(msg, context)
     else:
-        reply_message = threading.get_native_id()
+        reply_message = await sendMessage('No result found', context)
+    threading.Thread(target=auto_delete_message, args=(context.bot, update.message, reply_message)).start()
 
 
 list_handler = CommandHandler(BotCommands.ListCommand, list_drive,filters=CustomFilters.authorized_chat | CustomFilters.authorized_user)
