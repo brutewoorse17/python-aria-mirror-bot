@@ -1,0 +1,25 @@
+# MEGA SDK packages for virtual environment
+# Updated with working configuration and usage notes
+
+# Core MEGA package (terminal-based client)
+mega>=0.2.11
+
+# MEGA SDK REST Client (works in async context)
+megasdkrestclient>=0.1.1
+
+# Required dependencies
+requests>=2.32.0
+aiohttp>=3.12.0
+beautifulsoup4>=4.13.0
+lxml>=6.0.0
+trio>=0.30.0
+asks>=3.0.0
+
+# Additional dependencies
+python-dotenv>=0.10
+
+# Usage Notes:
+# 1. mega package: Terminal-based MEGA client (not suitable for programmatic use)
+# 2. megasdkrestclient: Works correctly in async context with proper aiohttp session management
+# 3. Always use megasdkrestclient in async functions with aiohttp.ClientSession
+# 4. Example: async with aiohttp.ClientSession() as session: client = megasdkrestclient.AsyncMegaSdkRestClient(base_url, session)
