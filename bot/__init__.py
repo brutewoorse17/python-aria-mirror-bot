@@ -133,6 +133,18 @@ try:
 except KeyError:
     UPLOAD_AS_VIDEO = False
 try:
+    VIDEO_THUMB_PATH = getConfig('VIDEO_THUMB_PATH')
+    if len(VIDEO_THUMB_PATH) == 0:
+        VIDEO_THUMB_PATH = None
+except KeyError:
+    VIDEO_THUMB_PATH = None
+try:
+    USE_CUSTOM_THUMB = getConfig('USE_CUSTOM_THUMB')
+    if isinstance(USE_CUSTOM_THUMB, str):
+        USE_CUSTOM_THUMB = True if USE_CUSTOM_THUMB.lower() == 'true' else False
+except KeyError:
+    USE_CUSTOM_THUMB = False
+try:
     IS_TEAM_DRIVE = getConfig('IS_TEAM_DRIVE')
     if IS_TEAM_DRIVE.lower() == 'true':
         IS_TEAM_DRIVE = True

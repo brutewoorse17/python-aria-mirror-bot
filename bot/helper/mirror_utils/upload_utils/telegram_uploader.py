@@ -1,11 +1,32 @@
 import logging
 import threading
 import time
+import subprocess
 
 from pyrogram import Client
-from bot import LOGGER, TELEGRAM_API, TELEGRAM_HASH, USER_SESSION_STRING, UPLOAD_AS_VIDEO
+from pymediainfo import MediaInfo
+from bot import LOGGER, TELEGRAM_API, TELEGRAM_HASH, USER_SESSION_STRING, UPLOAD_AS_VIDEO, USE_CUSTOM_THUMB, VIDEO_THUMB_PATH
 
 logging.getLogger("pyrogram").setLevel(logging.WARNING)
+
+
+def _get_video_duration_seconds(file_path: str) -> int:
+    try:
+        mi = MediaInfo.parse(file_path)
+        for track in mi.tracks:
+            if track.track_type == 'Video' and track.duration:
+                return int(float(track.duration) / 1000)
+    except Exception:
+        pass
+    # fallback to ffprobe
+    try:
+        out = subprocess.check_output([
+            'ffprobe', '-v', 'error', '-select_streams', 'v:0', '-show_entries', 'format=duration',
+            '-of', 'default=noprint_wrappers=1:nokey=1', file_path
+        ], stderr=subprocess.STDOUT)
+        return int(float(out.decode().strip()))
+    except Exception:
+        return 0
 
 
 class TelegramUploader:
@@ -53,11 +74,15 @@ class TelegramUploader:
             self.__start_time = time.time()
             LOGGER.info(f"Uploading to Telegram: {file_path}")
             if UPLOAD_AS_VIDEO and (self.name.lower().endswith('.mp4') or self.name.lower().endswith('.mkv')):
+                duration = _get_video_duration_seconds(file_path)
+                thumb = VIDEO_THUMB_PATH if USE_CUSTOM_THUMB and VIDEO_THUMB_PATH else None
                 self.__user_bot.send_video(
                     chat_id=self.__chat_id,
                     video=file_path,
                     file_name=self.name,
                     supports_streaming=True,
+                    duration=duration if duration > 0 else None,
+                    thumb=thumb,
                     progress=self.__on_progress,
                     progress_args=(),
                     reply_to_message_id=self.__reply_to_message_id

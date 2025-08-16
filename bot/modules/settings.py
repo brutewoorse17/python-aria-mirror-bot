@@ -7,6 +7,7 @@ from bot.helper.telegram_helper.filters import CustomFilters
 
 def _settings_text() -> str:
 	index_url = bot.INDEX_URL if bot.INDEX_URL else 'None'
+	thumb = bot.VIDEO_THUMB_PATH if bot.VIDEO_THUMB_PATH else 'None'
 	return (
 		"<b>Bot Settings</b>\n\n"
 		f"Team Drive: <code>{bot.IS_TEAM_DRIVE}</code>\n"
@@ -15,6 +16,8 @@ def _settings_text() -> str:
 		f"Auto Delete Duration: <code>{bot.AUTO_DELETE_MESSAGE_DURATION}</code> (−1 disables)\n"
 		f"Index URL: <code>{index_url}</code>\n"
 		f"Upload as Video: <code>{bot.UPLOAD_AS_VIDEO}</code>\n"
+		f"Use Custom Thumb: <code>{bot.USE_CUSTOM_THUMB}</code>\n"
+		f"Thumb Path: <code>{thumb}</code>\n"
 	)
 
 
@@ -46,6 +49,12 @@ def _settings_keyboard() -> InlineKeyboardMarkup:
 			InlineKeyboardButton(
 				f"Upload as Video: {'ON' if bot.UPLOAD_AS_VIDEO else 'OFF'}",
 				callback_data="settings:toggle_upload_video",
+			)
+		],
+		[
+			InlineKeyboardButton(
+				f"Use Custom Thumb: {'ON' if bot.USE_CUSTOM_THUMB else 'OFF'}",
+				callback_data="settings:toggle_thumb",
 			)
 		],
 		[
@@ -96,6 +105,8 @@ async def settings_callback(update, context):
 			bot.AUTO_DELETE_MESSAGE_DURATION = -1 if bot.AUTO_DELETE_MESSAGE_DURATION != -1 else 20
 		elif data == "settings:toggle_upload_video":
 			bot.UPLOAD_AS_VIDEO = not bot.UPLOAD_AS_VIDEO
+		elif data == "settings:toggle_thumb":
+			bot.USE_CUSTOM_THUMB = not bot.USE_CUSTOM_THUMB
 		# refresh or after any change
 		await query.edit_message_text(
 			text=_settings_text(), parse_mode='HTML', reply_markup=_settings_keyboard()
