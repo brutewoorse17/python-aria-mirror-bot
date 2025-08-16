@@ -1,0 +1,74 @@
+version: '3.8'
+
+services:
+  # JDownloader service
+  jdownloader:
+    image: jaymoulin/jdownloader:latest
+    container_name: jdownloader
+    restart: unless-stopped
+    ports:
+      - "5800:5800"  # JDownloader web interface
+      - "5700:5700"  # JDownloader API
+    environment:
+      - PUID=1000
+      - PGID=1000
+      - TZ=UTC
+      - JDOWNLOADER_USER=your_jdownloader_username
+      - JDOWNLOADER_PASS=your_jdownloader_password
+    volumes:
+      - ./jdownloader_config:/config
+      - ./downloads:/downloads
+    networks:
+      - bot_network
+
+  # Redis service (required for the bot)
+  redis:
+    image: redis:7-alpine
+    container_name: bot_redis
+    restart: unless-stopped
+    ports:
+      - "6379:6379"
+    command: redis-server --requirepass your_redis_password
+    volumes:
+      - ./redis_data:/data
+    networks:
+      - bot_network
+
+  # Main bot service
+  bot:
+    build: .
+    container_name: mirror_bot
+    restart: unless-stopped
+    depends_on:
+      - jdownloader
+      - redis
+    environment:
+      - JDOWNLOADER_HOST=http://jdownloader:5800
+      - JDOWNLOADER_USERNAME=your_jdownloader_username
+      - JDOWNLOADER_PASSWORD=your_jdownloader_password
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+      - REDIS_PASSWORD=your_redis_password
+      - MEGA_USERNAME=your_mega_email
+      - MEGA_PASSWORD=your_mega_password
+      - DOWNLOAD_DIR=/downloads
+      - BOT_TOKEN=your_telegram_bot_token
+      - OWNER_ID=your_telegram_user_id
+      - GDRIVE_FOLDER_ID=your_google_drive_folder_id
+      - TELEGRAM_API=your_telegram_api_id
+      - TELEGRAM_HASH=your_telegram_api_hash
+      - USER_SESSION_STRING=your_session_string
+    volumes:
+      - ./downloads:/downloads
+      - ./credentials:/credentials
+    networks:
+      - bot_network
+
+networks:
+  bot_network:
+    driver: bridge
+
+volumes:
+  jdownloader_config:
+  redis_data:
+  downloads:
