@@ -145,6 +145,12 @@ try:
 except KeyError:
     USE_CUSTOM_THUMB = False
 try:
+    TG_PART_SIZE_MB = int(getConfig('TG_PART_SIZE_MB'))
+    if TG_PART_SIZE_MB <= 0:
+        TG_PART_SIZE_MB = 1950
+except KeyError:
+    TG_PART_SIZE_MB = 1950
+try:
     IS_TEAM_DRIVE = getConfig('IS_TEAM_DRIVE')
     if IS_TEAM_DRIVE.lower() == 'true':
         IS_TEAM_DRIVE = True
