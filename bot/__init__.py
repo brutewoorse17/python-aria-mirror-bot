@@ -66,12 +66,25 @@ AUTHORIZED_CHATS = set()
 WAITING_FOR_TOKEN_PICKLE = False
 
 redis_authorised_chats_key = 'bots:authorized_chats'
+
 def redis_init():
     global redis_client
-    redis_client = redis.Redis(host=getConfig('REDIS_HOST'), port=int(getConfig('REDIS_PORT')), password=getConfig('REDIS_PASSWORD'))
-    ids = redis_client.smembers(redis_authorised_chats_key)
-    for id in ids:
-        AUTHORIZED_CHATS.add(int(id))
+    try:
+        host = getConfig('REDIS_HOST')
+        port = int(getConfig('REDIS_PORT'))
+        password = getConfig('REDIS_PASSWORD')
+        if not host:
+            LOGGER.warning('REDIS_HOST not set; skipping Redis initialization')
+            return
+        redis_client = redis.Redis(host=host, port=port, password=password)
+        ids = redis_client.smembers(redis_authorised_chats_key)
+        for id in ids:
+            AUTHORIZED_CHATS.add(int(id))
+        LOGGER.info('Redis initialized; authorized chats loaded')
+    except Exception as e:
+        LOGGER.error(f'Redis init failed: {e}. Continuing without Redis persistence')
+        redis_client = None
+
 redis_thread = threading.Thread(target=redis_init)
 redis_thread.start()
 try:

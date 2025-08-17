@@ -1,5 +1,5 @@
-from telegram.message import Message
-from telegram.update import Update
+from telegram import Message
+from telegram import Update
 import time
 from bot import AUTO_DELETE_MESSAGE_DURATION, LOGGER, bot, \
     status_reply_dict, status_reply_dict_lock
