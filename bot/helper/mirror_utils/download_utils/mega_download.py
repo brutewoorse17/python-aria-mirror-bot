@@ -1,10 +1,10 @@
 import threading
-from bot import LOGGER, download_dict, download_dict_lock
+from bot import LOGGER, download_dict, download_dict_lock, MEGA_KEY
 from .download_helper import DownloadHelper
 from ..status_utils.mega_status import MegaDownloadStatus
-from megasdkrestclient import MegaSdkRestClient, constants
 from bot.helper.ext_utils.bot_utils import setInterval
 from pathlib import Path
+import subprocess, time
 
 
 class MegaDownloader:
@@ -16,6 +16,12 @@ class MegaDownloader:
         self.__name = ""
         self.__gid = ''
         self.__resource_lock = threading.Lock()
+        # Lazy import and setup to avoid event loop errors
+        if MEGA_KEY is not None:
+            subprocess.Popen(["megasdkrest", "--apikey", MEGA_KEY])
+            time.sleep(3)
+        from megasdkrestclient import MegaSdkRestClient, constants
+        self.__constants = constants
         self.__mega_client = MegaSdkRestClient('http://localhost:6090')
         self.__periodic = None
         self.__downloaded_bytes = 0
@@ -64,17 +70,17 @@ class MegaDownloader:
 
     def __onInterval(self):
         dlInfo = self.__mega_client.getDownloadInfo(self.gid)
-        if (dlInfo['state'] == constants.State.TYPE_STATE_COMPLETED or dlInfo[
-            'state'] == constants.State.TYPE_STATE_CANCELED or dlInfo[
-                'state'] == constants.State.TYPE_STATE_FAILED) and self.__periodic is not None:
+        if (dlInfo['state'] == self.__constants.State.TYPE_STATE_COMPLETED or dlInfo[
+            'state'] == self.__constants.State.TYPE_STATE_CANCELED or dlInfo[
+                'state'] == self.__constants.State.TYPE_STATE_FAILED) and self.__periodic is not None:
             self.__periodic.cancel()
-        if dlInfo['state'] == constants.State.TYPE_STATE_COMPLETED:
+        if dlInfo['state'] == self.__constants.State.TYPE_STATE_COMPLETED:
             self.__onDownloadComplete()
             return
-        if dlInfo['state'] == constants.State.TYPE_STATE_CANCELED:
+        if dlInfo['state'] == self.__constants.State.TYPE_STATE_CANCELED:
             self.__onDownloadError('Cancelled by user')
             return
-        if dlInfo['state'] == constants.State.TYPE_STATE_FAILED:
+        if dlInfo['state'] == self.__constants.State.TYPE_STATE_FAILED:
             self.__onDownloadError(dlInfo['error_string'])
             return
         self.__onDownloadProgress(dlInfo['completed_length'], dlInfo['total_length'])

@@ -17,7 +17,7 @@ from bot.helper.mirror_utils.upload_utils import gdriveTools
 from bot.helper.telegram_helper.bot_commands import BotCommands
 from bot.helper.telegram_helper.filters import CustomFilters
 from bot.helper.telegram_helper.message_utils import *
-from bot.helper.mirror_utils.download_utils.mega_download import MegaDownloader
+
 import pathlib
 import os
 import subprocess
@@ -220,6 +220,7 @@ async def mirror(update, context):
         LOGGER.info(f'{link}: {e}')
     listener = MirrorListener(context.bot, update, False, tag, False)
     if bot_utils.is_mega_link(link) and MEGA_KEY is not None:
+        from bot.helper.mirror_utils.download_utils.mega_download import MegaDownloader
         mega_dl = MegaDownloader(listener)
         mega_dl.add_download(link, f'{DOWNLOAD_DIR}{listener.uid}/')
     else:
