@@ -152,14 +152,16 @@ def _schedule_coroutine(coro):
             if hasattr(application, '_loop') and application._loop and application._loop.is_running():
                 asyncio.run_coroutine_threadsafe(coro, application._loop)
             else:
-                # Last resort: try to create a new event loop
+                # Try to get the default event loop
                 try:
-                    loop = asyncio.new_event_loop()
-                    asyncio.set_event_loop(loop)
-                    loop.run_until_complete(coro)
-                    loop.close()
-                except Exception as e:
-                    LOGGER.error(f"Could not schedule coroutine: {e}")
+                    loop = asyncio.get_event_loop()
+                    if loop.is_running():
+                        asyncio.create_task(coro)
+                    else:
+                        # Don't run in a closed loop
+                        LOGGER.warning("Event loop is closed, skipping coroutine execution")
+                except RuntimeError:
+                    LOGGER.warning("No event loop available, skipping coroutine execution")
         except Exception as e:
             LOGGER.error(f"Could not access application loop: {e}")
 
