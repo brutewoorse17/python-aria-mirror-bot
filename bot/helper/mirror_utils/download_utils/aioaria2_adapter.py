@@ -21,6 +21,7 @@ class _AioAria2Download:
 		self._last_status: Dict[str, Any] = {}
 
 	def _update(self) -> None:
+		self._api._ensure_http()
 		self._last_status = self._api._run(self._api._http.tellStatus(self._gid)) or {}
 
 	@property
@@ -148,11 +149,17 @@ class AioAria2API:
 	def __init__(self, rpc_url: str, token: Optional[str] = None):
 		self._rpc_url = rpc_url
 		self._token = token or ""
-		self._http = aioaria2.Aria2HttpClient(self._rpc_url, token=self._token)
+		self._http = None
 		self._ws_thread = None
 
 	def _run(self, coro):
 		return asyncio.run(coro)
+
+	def _ensure_http(self) -> None:
+		if self._http is None:
+			async def _init():
+				return aioaria2.Aria2HttpClient(self._rpc_url, token=self._token)
+			self._http = self._run(_init())
 
 	def listen_to_notifications(self, threaded: bool = True, on_download_start: Optional[Callable] = None,
 							  on_download_error: Optional[Callable] = None, on_download_pause: Optional[Callable] = None,
@@ -194,6 +201,7 @@ class AioAria2API:
 
 	def add_magnet(self, link: str, options: Optional[Dict[str, Any]] = None) -> _AddResult:
 		try:
+			self._ensure_http()
 			gid = self._run(self._http.addUri([link], options or {}))
 			status = self._run(self._http.tellStatus(gid)) or {}
 			return _AddResult(gid=gid, dir=status.get("dir", ""), error_message="")
@@ -202,6 +210,7 @@ class AioAria2API:
 
 	def add_uris(self, uris: List[str], options: Optional[Dict[str, Any]] = None) -> _AddResult:
 		try:
+			self._ensure_http()
 			gid = self._run(self._http.addUri(uris, options or {}))
 			status = self._run(self._http.tellStatus(gid)) or {}
 			return _AddResult(gid=gid, dir=status.get("dir", ""), error_message="")
@@ -215,6 +224,7 @@ class AioAria2API:
 		return [self.get_download(g) for g in gids]
 
 	def pause(self, downloads: Iterable[_AioAria2Download]) -> None:
+		self._ensure_http()
 		for dl in downloads:
 			gid = dl.gid if isinstance(dl, _AioAria2Download) else str(dl)
 			try:
@@ -223,6 +233,7 @@ class AioAria2API:
 				pass
 
 	def remove(self, downloads: Iterable[_AioAria2Download]) -> None:
+		self._ensure_http()
 		for dl in downloads:
 			gid = dl.gid if isinstance(dl, _AioAria2Download) else str(dl)
 			try:
