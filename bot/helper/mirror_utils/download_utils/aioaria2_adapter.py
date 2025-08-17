@@ -1,4 +1,5 @@
 import asyncio
+import threading
 from dataclasses import dataclass
 from typing import Any, Callable, Dict, Iterable, List, Optional
 
@@ -151,9 +152,23 @@ class AioAria2API:
 		self._token = token or ""
 		self._http = None
 		self._ws_thread = None
+		self._loop: Optional[asyncio.AbstractEventLoop] = None
+		self._loop_thread: Optional[threading.Thread] = None
+		self._ensure_loop()
+
+	def _ensure_loop(self) -> None:
+		if self._loop is None:
+			loop = asyncio.new_event_loop()
+			def _runner():
+				asyncio.set_event_loop(loop)
+				loop.run_forever()
+			self._loop = loop
+			self._loop_thread = threading.Thread(target=_runner, daemon=True)
+			self._loop_thread.start()
 
 	def _run(self, coro):
-		return asyncio.run(coro)
+		self._ensure_loop()
+		return asyncio.run_coroutine_threadsafe(coro, self._loop).result()
 
 	def _ensure_http(self) -> None:
 		if self._http is None:
@@ -197,6 +212,7 @@ class AioAria2API:
 			self._ws_thread = threading.Thread(target=lambda: asyncio.run(_runner()), daemon=True)
 			self._ws_thread.start()
 		else:
+			# Run websocket trigger on background loop
 			self._run(_runner())
 
 	def add_magnet(self, link: str, options: Optional[Dict[str, Any]] = None) -> _AddResult:
