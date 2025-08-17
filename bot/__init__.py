@@ -63,6 +63,7 @@ download_dict = {}
 # Stores list of users and chats the bot is authorized to use in
 redis_client = None
 AUTHORIZED_CHATS = set()
+WAITING_FOR_TOKEN_PICKLE = False
 
 redis_authorised_chats_key = 'bots:authorized_chats'
 def redis_init():
