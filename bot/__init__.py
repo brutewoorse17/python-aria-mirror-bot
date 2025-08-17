@@ -108,30 +108,37 @@ try:
 except KeyError:
     MEGA_KEY = None
     LOGGER.info('MEGA API KEY NOT AVAILABLE')
+
 # Defer starting megasdkrest until first Mega download to avoid event loop issues
 MEGA_USERNAME = None
 MEGA_PASSWORD = None
-if MEGA_KEY is not None:
+if MEGA_KEY is not None and MEGA_KEY.strip():  # Check if MEGA_KEY is not None and not empty
     # Start megasdkrest binary
-    subprocess.Popen(["megasdkrest", "--apikey", MEGA_KEY])
-    time.sleep(3)  # Wait for the mega server to start listening
-    # mega_client = MegaSdkRestClient('http://localhost:6090') # This line was commented out in the original file
     try:
-        MEGA_USERNAME = getConfig('MEGA_USERNAME')
-        MEGA_PASSWORD = getConfig('MEGA_PASSWORD')
-        if len(MEGA_USERNAME) > 0 and len(MEGA_PASSWORD) > 0:
-            try:
-                # mega_client.login(MEGA_USERNAME, MEGA_PASSWORD) # This line was commented out in the original file
-                pass # Placeholder for actual mega_client.login call if mega_client is defined
-            except Exception as e: # Changed from mega_err.MegaSdkRestClientException to Exception
-                logging.error(e)
-                exit(0)
-        else:
+        subprocess.Popen(["megasdkrest", "--apikey", MEGA_KEY])
+        time.sleep(3)  # Wait for the mega server to start listening
+        # mega_client = MegaSdkRestClient('http://localhost:6090') # This line was commented out in the original file
+        try:
+            MEGA_USERNAME = getConfig('MEGA_USERNAME')
+            MEGA_PASSWORD = getConfig('MEGA_PASSWORD')
+            if len(MEGA_USERNAME) > 0 and len(MEGA_PASSWORD) > 0:
+                try:
+                    # mega_client.login(MEGA_USERNAME, MEGA_PASSWORD) # This line was commented out in the original file
+                    pass # Placeholder for actual mega_client.login call if mega_client is defined
+                except Exception as e: # Changed from mega_err.MegaSdkRestClientException to Exception
+                    logging.error(e)
+                    exit(0)
+            else:
+                LOGGER.info("Mega API KEY provided but credentials not provided. Starting mega in anonymous mode!")
+                MEGA_USERNAME = None
+                MEGA_PASSWORD = None
+        except KeyError:
             LOGGER.info("Mega API KEY provided but credentials not provided. Starting mega in anonymous mode!")
             MEGA_USERNAME = None
             MEGA_PASSWORD = None
-    except KeyError:
-        LOGGER.info("Mega API KEY provided but credentials not provided. Starting mega in anonymous mode!")
+    except FileNotFoundError:
+        LOGGER.warning("megasdkrest binary not found, MEGA downloads will not work")
+        MEGA_KEY = None
         MEGA_USERNAME = None
         MEGA_PASSWORD = None
 else:
