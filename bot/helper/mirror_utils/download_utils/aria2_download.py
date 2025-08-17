@@ -37,26 +37,49 @@ class AriaDownloadHelper(DownloadHelper):
 	def __onDownloadPause(self, api, gid):
 		LOGGER.info(f"onDownloadPause: {gid}")
 		dl = getDownloadByGid(gid)
-		dl.getListener().onDownloadError('Download stopped by user!')
+		if not dl:
+			return
+		# If user cancelled, keep existing message
+		if getattr(dl, 'cancelled_by_user', False):
+			dl.getListener().onDownloadError('Download stopped by user!')
+			return
+		# Otherwise treat as auto-stop (stalled/dead)
+		download = aria2.get_download(gid)
+		name = dl.name()
+		speed = download.download_speed_string()
+		msg = f"Stopped due to inactivity: {name} (speed {speed}). You can try again later."
+		dl.getListener().onDownloadError(msg)
 
 	@new_thread
 	def __onDownloadStopped(self, api, gid):
 		LOGGER.info(f"onDownloadStop: {gid}")
 		dl = getDownloadByGid(gid)
-		if dl:
+		if not dl:
+			return
+		if getattr(dl, 'cancelled_by_user', False):
 			dl.getListener().onDownloadError('Download stopped by user!')
+			return
+		download = aria2.get_download(gid)
+		speed = download.download_speed_string()
+		msg = f"Stopped due to inactivity: {dl.name()} (speed {speed}). You can try again later."
+		dl.getListener().onDownloadError(msg)
 
 	@new_thread
 	def __onDownloadError(self, api, gid):
-		sleep(0.5)  # sleep for split second to ensure proper dl gid update from onDownloadComplete
+		sleep(0.5)
 		LOGGER.info(f"onDownloadError: {gid}")
 		dl = getDownloadByGid(gid)
+		if not dl:
+			return
 		download = aria2.get_download(gid)
-		error = getattr(download, 'error_message', None)
-		if not error:
-			error = 'Unknown error'
-		LOGGER.info(f"Download Error: {error}")
-		if dl: dl.getListener().onDownloadError(error)
+		# If aria2 reports errorCode 31 (stalled) or 0 speed for long, treat as inactivity
+		code = getattr(download, 'error_code', None)
+		err = getattr(download, 'error_message', '') or 'Unknown error'
+		if code in (31,):
+			msg = f"Stopped due to inactivity: {dl.name()} (no peers)."
+			dl.getListener().onDownloadError(msg)
+			return
+		dl.getListener().onDownloadError(err)
 
 	def start_listener(self):
 		aria2.listen_to_notifications(threaded=True, on_download_start=self.__onDownloadStarted,

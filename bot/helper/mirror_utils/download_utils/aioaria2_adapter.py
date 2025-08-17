@@ -58,6 +58,41 @@ class _AioAria2Download:
 		return f"{get_readable_file_size(speed)}/s"
 
 	@property
+	def download_speed(self) -> int:
+		self._update()
+		return int(self._last_status.get("downloadSpeed", 0))
+
+	def progress_string(self) -> str:
+		self._update()
+		total = int(self._last_status.get("totalLength", 0))
+		completed = int(self._last_status.get("completedLength", 0))
+		if total <= 0:
+			return "0%"
+		percent = int(completed * 100 / total)
+		percent = max(0, min(100, percent))
+		return f"{percent}%"
+
+	@property
+	def status(self) -> str:
+		self._update()
+		return str(self._last_status.get("status") or "")
+
+	@property
+	def error_code(self) -> Optional[int]:
+		self._update()
+		code = self._last_status.get("errorCode")
+		try:
+			return int(code) if code is not None else None
+		except Exception:
+			return None
+
+	@property
+	def error_message(self) -> str:
+		self._update()
+		msg = self._last_status.get("errorMessage")
+		return str(msg) if msg else ""
+
+	@property
 	def name(self) -> str:
 		self._update()
 		bt = self._last_status.get("bittorrent") or {}
