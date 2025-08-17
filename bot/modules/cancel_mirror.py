@@ -29,15 +29,13 @@ async def cancel_mirror(update, context):
             dl = download_dict[mirror_message.message_id]
     if len(args) == 1:
         if mirror_message is None or mirror_message.message_id not in keys:
-            if BotCommands.MirrorCommand in mirror_message.text or \
-                    BotCommands.TarMirrorCommand in mirror_message.text:
+            text = (mirror_message.text if (mirror_message and getattr(mirror_message, 'text', None)) else '') or ''
+            if BotCommands.MirrorCommand in text or BotCommands.TarMirrorCommand in text:
                 msg = "Mirror already have been cancelled"
-                await sendMessage(msg, context, update)
-                return
             else:
                 msg = "Please reply to the /mirror message which was used to start the download or /cancel gid to cancel it!"
-                await sendMessage(msg, context, update)
-                return
+            await sendMessage(msg, context, update)
+            return
     if dl.status() == "Uploading":
         await sendMessage("Upload in Progress, Don't Cancel it.", context, update)
         return
