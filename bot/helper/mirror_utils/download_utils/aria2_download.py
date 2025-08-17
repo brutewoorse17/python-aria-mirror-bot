@@ -1,4 +1,4 @@
-from bot import aria2, download_dict_lock
+from bot import aria2, download_dict_lock, download_dict
 from bot.helper.ext_utils.bot_utils import *
 from .download_helper import DownloadHelper
 from bot.helper.mirror_utils.status_utils.aria_download_status import AriaDownloadStatus
