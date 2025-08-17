@@ -11,8 +11,9 @@ from bot import application
 
 async def sendMessage(text: str, context, update: Update = None):
     try:
+        if not text:
+            text = " "
         if update is None:
-            # Fallback to context data if available (PTB v21 ContextTypes.DEFAULT_TYPE)
             chat_id = getattr(getattr(context, 'chat_data', None), 'id', None) or getattr(getattr(context, 'chat', None), 'id', None)
             message_id = None
         else:
@@ -64,24 +65,26 @@ def send_message_async(chat_id, reply_to_message_id, text, parse_mode='HTMl'):
     application.create_task(_async_send_message(chat_id, reply_to_message_id, text, parse_mode))
 
 
-def auto_delete_message(bot, cmd_message: Message, bot_message: Message):
+def auto_delete_message(cmd_message: Message, bot_message: Message):
     if AUTO_DELETE_MESSAGE_DURATION != -1:
         time.sleep(AUTO_DELETE_MESSAGE_DURATION)
         try:
-            # Skip if None is passed meaning we don't want to delete bot xor cmd message
-            deleteMessage(bot, cmd_message)
-            deleteMessage(bot, bot_message)
-        except AttributeError:
-            pass
+            if cmd_message:
+                application.create_task(application.bot.delete_message(chat_id=cmd_message.chat.id, message_id=cmd_message.message_id))
+            if bot_message:
+                application.create_task(application.bot.delete_message(chat_id=bot_message.chat.id, message_id=bot_message.message_id))
+        except Exception as e:
+            LOGGER.error(str(e))
 
 
 def delete_all_messages():
     with status_reply_dict_lock:
         for message in list(status_reply_dict.values()):
             try:
-                # In async flow we cannot await here; relying on older sync bot for cleanup
-                bot.delete_message(chat_id=message.chat.id,
-                                   message_id=message.message_id)
+                if not message or not getattr(message, 'chat', None):
+                    continue
+                application.create_task(application.bot.delete_message(chat_id=message.chat.id,
+                                   message_id=message.message_id))
                 del status_reply_dict[message.chat.id]
             except Exception as e:
                 LOGGER.error(str(e))
