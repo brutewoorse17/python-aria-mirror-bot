@@ -29,12 +29,21 @@ def clean_all():
         else:
             # Fallback: try to get and remove downloads individually
             try:
-                downloads = aria2.get_downloads()
-                for download in downloads:
+                # Get active downloads first
+                active_downloads = aria2.tellActive()
+                for download in active_downloads:
                     try:
                         aria2.remove([download.gid])
                     except Exception as e:
-                        LOGGER.warning(f"Could not remove download {download.gid}: {e}")
+                        LOGGER.warning(f"Could not remove active download {download.gid}: {e}")
+                
+                # Get stopped downloads (including completed and error ones)
+                stopped_downloads = aria2.tellStopped(0, 1000)
+                for download in stopped_downloads:
+                    try:
+                        aria2.remove([download.gid])
+                    except Exception as e:
+                        LOGGER.warning(f"Could not remove stopped download {download.gid}: {e}")
             except Exception as e:
                 LOGGER.warning(f"Could not get downloads for cleanup: {e}")
     except Exception as e:

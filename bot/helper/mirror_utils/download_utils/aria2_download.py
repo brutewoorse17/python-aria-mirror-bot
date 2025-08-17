@@ -37,17 +37,27 @@ class AriaDownloadHelper(DownloadHelper):
 			return
 			
 		try:
-			download = aria2.get_download(gid)
+			# Try to get download object - handle different aioaria2 versions
+			try:
+				download = aria2.get_download(gid)
+			except TypeError:
+				# Newer versions might require different parameters
+				download = aria2.get_download(gid=gid)
+			
 			if not download:
 				LOGGER.warning(f"Could not get aria2 download object for gid {gid}")
 				return
 				
-			if download.followed_by_ids:
+			if hasattr(download, 'followed_by_ids') and download.followed_by_ids:
 				new_gid = download.followed_by_ids[0]
-				new_download = aria2.get_download(new_gid)
+				try:
+					new_download = aria2.get_download(new_gid)
+				except TypeError:
+					new_download = aria2.get_download(gid=new_gid)
+					
 				with download_dict_lock:
 					download_dict[dl.uid()] = AriaDownloadStatus(new_gid, dl.getListener())
-					if new_download.is_torrent:
+					if hasattr(new_download, 'is_torrent') and new_download.is_torrent:
 						download_dict[dl.uid()].is_torrent = True
 				update_all_messages()
 				LOGGER.info(f'Changed gid from {gid} to {new_gid}')
@@ -78,12 +88,16 @@ class AriaDownloadHelper(DownloadHelper):
 				dl.getListener().onDownloadError('Download stopped by user!')
 				return
 			# Otherwise treat as auto-stop (stalled/dead)
-			download = aria2.get_download(gid)
+			try:
+				download = aria2.get_download(gid)
+			except TypeError:
+				download = aria2.get_download(gid=gid)
+				
 			if not download:
 				LOGGER.warning(f"Could not get aria2 download object for gid {gid}")
 				return
 			name = dl.name()
-			speed = download.download_speed_string()
+			speed = getattr(download, 'download_speed_string', lambda: '0 B/s')()
 			msg = f"Stopped due to inactivity: {name} (speed {speed}). You can try again later."
 			dl.getListener().onDownloadError(msg)
 		except Exception as e:
@@ -107,11 +121,15 @@ class AriaDownloadHelper(DownloadHelper):
 			if getattr(dl, 'cancelled_by_user', False):
 				dl.getListener().onDownloadError('Download stopped by user!')
 				return
-			download = aria2.get_download(gid)
+			try:
+				download = aria2.get_download(gid)
+			except TypeError:
+				download = aria2.get_download(gid=gid)
+				
 			if not download:
 				LOGGER.warning(f"Could not get aria2 download object for gid {gid}")
 				return
-			speed = download.download_speed_string()
+			speed = getattr(download, 'download_speed_string', lambda: '0 B/s')()
 			msg = f"Stopped due to inactivity: {dl.name()} (speed {speed}). You can try again later."
 			dl.getListener().onDownloadError(msg)
 		except Exception as e:
@@ -133,7 +151,11 @@ class AriaDownloadHelper(DownloadHelper):
 			return
 		
 		try:
-			download = aria2.get_download(gid)
+			try:
+				download = aria2.get_download(gid)
+			except TypeError:
+				download = aria2.get_download(gid=gid)
+				
 			if not download:
 				LOGGER.warning(f"Could not get aria2 download object for gid {gid}")
 				dl.getListener().onDownloadError('Download error: could not retrieve download information')
@@ -153,18 +175,43 @@ class AriaDownloadHelper(DownloadHelper):
 			dl.getListener().onDownloadError(f'Download error: {str(e)}')
 
 	def start_listener(self):
-		aria2.listen_to_notifications(threaded=True, on_download_start=self.__onDownloadStarted,
-									  on_download_error=self.__onDownloadError,
-									  on_download_pause=self.__onDownloadPause,
-									  on_download_stop=self.__onDownloadStopped,
-									  on_download_complete=self.__onDownloadComplete)
+		try:
+			# For aioaria2 >= 1.3.6, use the new notification system
+			aria2.listen_to_notifications(threaded=True, on_download_start=self.__onDownloadStarted,
+										  on_download_error=self.__onDownloadError,
+										  on_download_pause=self.__onDownloadPause,
+										  on_download_stop=self.__onDownloadStopped,
+										  on_download_complete=self.__onDownloadComplete)
+			LOGGER.info("aria2 notification listener started successfully")
+		except Exception as e:
+			LOGGER.error(f"Failed to start aria2 notification listener: {e}")
+			# Try alternative method for newer versions
+			try:
+				aria2.listen_to_notifications(threaded=True, on_download_start=self.__onDownloadStarted,
+											  on_download_error=self.__onDownloadError,
+											  on_download_pause=self.__onDownloadPause,
+											  on_download_stop=self.__onDownloadStopped,
+											  on_download_complete=self.__onDownloadComplete)
+				LOGGER.info("aria2 notification listener started with alternative method")
+			except Exception as e2:
+				LOGGER.error(f"Failed to start aria2 notification listener with alternative method: {e2}")
+				LOGGER.warning("aria2 notifications may not work properly")
 
 	def add_download(self, link: str, path, listener):
 		try:
+			# Try to create download with proper error handling for different aioaria2 versions
 			if is_magnet(link):
-				download = aria2.add_magnet(link, {'dir': path})
+				try:
+					download = aria2.add_magnet(link, {'dir': path})
+				except TypeError:
+					# Newer versions might require different parameters
+					download = aria2.add_magnet(link, options={'dir': path})
 			else:
-				download = aria2.add_uris([link], {'dir': path})
+				try:
+					download = aria2.add_uris([link], {'dir': path})
+				except TypeError:
+					# Newer versions might require different parameters
+					download = aria2.add_uris([link], options={'dir': path})
 			
 			if not download:
 				LOGGER.error(f"Failed to create download for link: {link}")
