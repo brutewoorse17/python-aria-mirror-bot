@@ -91,6 +91,9 @@ python3 generate_string_session.py
 
 > Note: For Telegram uploads of folders, the bot creates a tar archive first, then uploads (video options apply only to actual video files).
 
+## Aria2 configuration
+- **BT_STOP_TIMEOUT**: (Optional) Seconds of zero download/upload activity before aria2 auto-stops a BitTorrent task (treats dead/stalled torrents). Default `600`. Override by exporting env var before start (e.g., `BT_STOP_TIMEOUT=900`).
+
 ## Getting Google OAuth API credential file
 
 - Visit the [Google Cloud Console](https://console.developers.google.com/apis/credentials)
