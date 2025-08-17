@@ -3,7 +3,7 @@ import re
 import threading
 import time
 
-from bot import download_dict, download_dict_lock
+# Late import of bot globals inside functions to avoid circular imports during package init
 
 LOGGER = logging.getLogger(__name__)
 
@@ -72,6 +72,7 @@ def get_readable_file_size(size_in_bytes) -> str:
 
 
 def getDownloadByGid(gid):
+    from bot import download_dict, download_dict_lock
     with download_dict_lock:
         for dl in download_dict.values():
             status = dl.status()
@@ -101,6 +102,7 @@ def get_progress_bar_string(status):
 
 
 def get_readable_message():
+    from bot import download_dict, download_dict_lock
     with download_dict_lock:
         msg = ""
         for download in list(download_dict.values()):
