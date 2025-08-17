@@ -12,11 +12,21 @@ import threading
 async def mirror_status(update, context):
     with status_reply_dict_lock:
         if update.message.chat.id in list(status_reply_dict.keys()):
-            message_obj, _ = status_reply_dict[update.message.chat.id]
-            await deleteMessage(context, message_obj)
-            del status_reply_dict[update.message.chat.id]
+            try:
+                message_obj, _ = status_reply_dict[update.message.chat.id]
+                if message_obj:  # Only delete if message_obj is not None
+                    await deleteMessage(context, message_obj)
+                del status_reply_dict[update.message.chat.id]
+            except Exception as e:
+                LOGGER.error(str(e))
+                del status_reply_dict[update.message.chat.id]
+        
         message = await sendMessage(get_readable_message(), context, update)
-        status_reply_dict[update.message.chat.id] = (message, get_readable_message())
+        # Only store in status_reply_dict if message was sent successfully
+        if message is not None:
+            status_reply_dict[update.message.chat.id] = (message, get_readable_message())
+        else:
+            LOGGER.error(f"Failed to send status message to chat {update.message.chat.id}")
 
 
 stats_handler = CommandHandler(BotCommands.StatusCommand, mirror_status,
