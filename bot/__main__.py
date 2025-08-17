@@ -95,7 +95,6 @@ async def bot_help(update, context):
 
 
 def main():
-    fs_utils.start_cleanup()
     # Check if the bot is restarting
     if path.exists('restart.pickle'):
         with open('restart.pickle', 'rb') as status:
