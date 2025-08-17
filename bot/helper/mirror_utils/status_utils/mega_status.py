@@ -62,3 +62,7 @@ class MegaDownloadStatus(Status):
     def rename_torrent(self, new_name: str) -> bool:
         """Mega downloads don't support torrent renaming"""
         return False
+
+    def can_rename(self) -> bool:
+        """Mega downloads don't support torrent renaming"""
+        return False

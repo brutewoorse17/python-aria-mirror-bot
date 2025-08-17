@@ -109,6 +109,8 @@ def main():
         remove('restart.pickle')
 
     app = application
+    
+    # Register all command handlers
     app.add_handler(CommandHandler(BotCommands.StartCommand, start,
                                    filters=CustomFilters.authorized_chat | CustomFilters.authorized_user))
     app.add_handler(CommandHandler(BotCommands.PingCommand, ping,
@@ -120,15 +122,49 @@ def main():
     app.add_handler(CommandHandler(BotCommands.StatsCommand,
                                    stats, filters=CustomFilters.authorized_chat | CustomFilters.authorized_user))
     app.add_handler(CommandHandler(BotCommands.LogCommand, log, filters=CustomFilters.owner_filter))
-    # Register Telegram upload command handler
+    
+    # Register module handlers
+    # Telegram upload command handler
     from .modules.tg_upload import tg_upload_handler
     app.add_handler(tg_upload_handler)
-    # Register rename command handler
-    from .modules.rename import rename_handler
+    
+    # Rename command handlers
+    from .modules.rename import rename_handler, list_torrents_handler
     app.add_handler(rename_handler)
-    # Register list torrents command handler
-    from .modules.rename import list_torrents_handler
     app.add_handler(list_torrents_handler)
+    
+    # Mirror command handlers
+    from .modules.mirror import mirror_handler, tar_mirror_handler, unzip_mirror_handler
+    app.add_handler(mirror_handler)
+    app.add_handler(tar_mirror_handler)
+    app.add_handler(unzip_mirror_handler)
+    
+    # Watch command handlers
+    from .modules.watch import mirror_handler as watch_handler, tar_mirror_handler as tar_watch_handler
+    app.add_handler(watch_handler)
+    app.add_handler(tar_watch_handler)
+    
+    # Other command handlers
+    from .modules.list import list_handler
+    app.add_handler(list_handler)
+    
+    from .modules.clone import clone_handler
+    app.add_handler(clone_handler)
+    
+    from .modules.cancel_mirror import cancel_mirror_handler, cancel_all_handler
+    app.add_handler(cancel_mirror_handler)
+    app.add_handler(cancel_all_handler)
+    
+    from .modules.mirror_status import mirror_status_handler
+    app.add_handler(mirror_status_handler)
+    
+    from .modules.settings import settings_handler, settings_cb_handler
+    app.add_handler(settings_handler)
+    app.add_handler(settings_cb_handler)
+    
+    from .modules.authorize import authorize_handler, unauthorize_handler
+    app.add_handler(authorize_handler)
+    app.add_handler(unauthorize_handler)
 
     app.run_polling()
     LOGGER.info("Bot Started!")

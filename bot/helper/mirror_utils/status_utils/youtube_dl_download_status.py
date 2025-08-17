@@ -64,3 +64,7 @@ class YoutubeDLDownloadStatus(Status):
     def rename_torrent(self, new_name: str) -> bool:
         """YouTube-DL downloads don't support torrent renaming"""
         return False
+
+    def can_rename(self) -> bool:
+        """YouTube-DL downloads don't support torrent renaming"""
+        return False

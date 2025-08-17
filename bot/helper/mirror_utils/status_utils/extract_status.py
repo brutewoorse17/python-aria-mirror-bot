@@ -41,3 +41,7 @@ class ExtractStatus(Status):
     def rename_torrent(self, new_name: str) -> bool:
         """Extract status doesn't support torrent renaming"""
         return False
+
+    def can_rename(self) -> bool:
+        """Extract status doesn't support torrent renaming"""
+        return False

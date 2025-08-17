@@ -203,6 +203,21 @@ class AioAria2API:
 	def changeOption(self, gid: str, options: Dict[str, Any]) -> None:
 		"""Change options for a download"""
 		try:
+			if not gid or not options:
+				LOGGER.warning(f"Invalid parameters for changeOption: gid={gid}, options={options}")
+				return
+			
+			# Validate that the download exists
+			download = self.get_download(gid)
+			if not download:
+				LOGGER.warning(f"Cannot change options: download with GID {gid} not found")
+				return
+			
+			# Log the option change for debugging
+			LOGGER.info(f"Changing options for download {gid}: {options}")
+			
 			self._run(self._http.changeOption(gid, options))
-		except Exception:
-			pass
+			LOGGER.info(f"Successfully changed options for download {gid}")
+		except Exception as e:
+			LOGGER.error(f"Failed to change options for download {gid}: {e}")
+			raise

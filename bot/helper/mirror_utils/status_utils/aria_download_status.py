@@ -116,22 +116,35 @@ class AriaDownloadStatus(Status):
             # For torrents, we need to change the download directory to effectively rename
             # Check if this is a torrent download
             if not self.is_torrent():
+                LOGGER.warning(f"Attempted to rename non-torrent download: {self.name()}")
                 return False
             
             # Check if the download is still active and can be renamed
             download = self.aria_download()
             if download.has_failed or download.is_paused:
+                LOGGER.warning(f"Cannot rename torrent {self.name()}: download is failed or paused")
+                return False
+            
+            # Check if aria2 is available
+            if not aria2:
+                LOGGER.error("Cannot rename torrent: aria2 is not available")
                 return False
             
             # Get current directory
             current_dir = download.dir
             if not current_dir:
+                LOGGER.warning(f"Cannot rename torrent {self.name()}: no directory found")
                 return False
             
             # Create new directory path with new name
             import os
             parent_dir = os.path.dirname(current_dir)
             new_dir = os.path.join(parent_dir, new_name)
+            
+            # Check if the new directory already exists
+            if os.path.exists(new_dir):
+                LOGGER.warning(f"Cannot rename torrent {self.name()}: target directory already exists")
+                return False
             
             # Change the directory option to rename the torrent
             aria2.changeOption(self.__gid, {"dir": new_dir})
@@ -144,9 +157,27 @@ class AriaDownloadStatus(Status):
                 LOGGER.info(f"Successfully renamed torrent {self.name()} to {new_name}")
                 return True
             else:
-                LOGGER.warning(f"Rename operation may not have been successful")
+                LOGGER.warning(f"Rename operation may not have been successful for {self.name()}")
                 return False
         except Exception as e:
-            LOGGER.error(f"Failed to rename torrent: {e}")
+            LOGGER.error(f"Failed to rename torrent {self.name()}: {e}")
+            return False
+
+    def can_rename(self) -> bool:
+        """Check if this download can be renamed"""
+        try:
+            if not self.is_torrent():
+                return False
+            
+            download = self.aria_download()
+            if download.has_failed or download.is_paused:
+                return False
+            
+            from bot import aria2
+            if not aria2:
+                return False
+            
+            return True
+        except Exception:
             return False
 

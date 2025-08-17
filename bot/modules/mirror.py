@@ -257,6 +257,4 @@ tar_mirror_handler = CommandHandler(BotCommands.TarMirrorCommand, tar_mirror,
                                     filters=CustomFilters.authorized_chat | CustomFilters.authorized_user)
 unzip_mirror_handler = CommandHandler(BotCommands.UnzipMirrorCommand, unzip_mirror,
                                       filters=CustomFilters.authorized_chat | CustomFilters.authorized_user)
-application.add_handler(mirror_handler)
-application.add_handler(tar_mirror_handler)
-application.add_handler(unzip_mirror_handler)
+# Handlers are now registered in __main__.py

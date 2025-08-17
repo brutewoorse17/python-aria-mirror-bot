@@ -62,3 +62,7 @@ class TelegramDownloadStatus(Status):
     def rename_torrent(self, new_name: str) -> bool:
         """Telegram downloads don't support torrent renaming"""
         return False
+
+    def can_rename(self) -> bool:
+        """Telegram downloads don't support torrent renaming"""
+        return False

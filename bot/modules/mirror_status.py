@@ -30,4 +30,4 @@ async def mirror_status(update,context):
 
 mirror_status_handler = CommandHandler(BotCommands.StatusCommand, mirror_status,
                                        filters=CustomFilters.authorized_chat | CustomFilters.authorized_user)
-application.add_handler(mirror_status_handler)
+# Handler is now registered in __main__.py

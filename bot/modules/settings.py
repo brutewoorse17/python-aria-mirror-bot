@@ -119,6 +119,5 @@ async def settings_callback(update, context):
 
 
 settings_handler = CommandHandler('settings', show_settings, filters=CustomFilters.owner_filter)
-settings_cb_handler = CallbackQueryHandler(settings_callback, pattern=r"^settings:")
-application.add_handler(settings_handler)
-application.add_handler(settings_cb_handler)
+settings_cb_handler = CallbackQueryHandler(settings_callback, pattern="set")
+# Handlers are now registered in __main__.py

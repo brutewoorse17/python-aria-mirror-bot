@@ -46,3 +46,7 @@ class Status:
     def rename_torrent(self, new_name: str) -> bool:
         """:return True if rename was successful, False otherwise"""
         return False
+
+    def can_rename(self) -> bool:
+        """:return True if this download can be renamed, False otherwise"""
+        return False

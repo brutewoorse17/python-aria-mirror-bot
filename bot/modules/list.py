@@ -52,4 +52,4 @@ async def list_drive(update, context):
 
 
 list_handler = CommandHandler(BotCommands.ListCommand, list_drive,filters=CustomFilters.authorized_chat | CustomFilters.authorized_user)
-application.add_handler(list_handler)
+# Handler is now registered in __main__.py

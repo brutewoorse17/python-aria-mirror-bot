@@ -21,4 +21,4 @@ async def cloneNode(update,context):
         await sendMessage("Provide G-Drive Shareable Link to Clone.",context)
 
 clone_handler = CommandHandler(BotCommands.CloneCommand,cloneNode,filters=CustomFilters.authorized_chat | CustomFilters.authorized_user)
-application.add_handler(clone_handler)
+# Handler is now registered in __main__.py

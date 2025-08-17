@@ -53,5 +53,4 @@ mirror_handler = CommandHandler(BotCommands.WatchCommand, watch,
                                 filters=CustomFilters.authorized_chat | CustomFilters.authorized_user)
 tar_mirror_handler = CommandHandler(BotCommands.TarWatchCommand, watchTar,
                                     filters=CustomFilters.authorized_chat | CustomFilters.authorized_user)
-application.add_handler(mirror_handler)
-application.add_handler(tar_mirror_handler)
+# Handlers are now registered in __main__.py

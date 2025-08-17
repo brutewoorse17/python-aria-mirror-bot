@@ -23,6 +23,10 @@ class UploadStatus(Status):
         """Upload status doesn't support torrent renaming"""
         return False
 
+    def can_rename(self) -> bool:
+        """Upload status doesn't support torrent renaming"""
+        return False
+
     def size_raw(self):
         return self.__size
 

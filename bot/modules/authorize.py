@@ -58,6 +58,5 @@ authorize_handler = CommandHandler(command=BotCommands.AuthorizeCommand, callbac
                                    filters=CustomFilters.owner_filter & CustomFilters.authorized_chat)
 unauthorize_handler = CommandHandler(command=BotCommands.UnAuthorizeCommand, callback=unauthorize,
                                      filters=CustomFilters.owner_filter & CustomFilters.authorized_chat)
-application.add_handler(authorize_handler)
-application.add_handler(unauthorize_handler)
+# Handlers are now registered in __main__.py
 
