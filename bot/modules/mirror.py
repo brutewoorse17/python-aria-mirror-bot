@@ -211,7 +211,7 @@ async def mirror(update, context):
     else:
         tag = None
     if not bot_utils.is_url(link) and not bot_utils.is_magnet(link):
-        await sendMessage('No download source provided', context)
+        await sendMessage('No download source provided', context, update)
         return
 
     try:
@@ -244,7 +244,7 @@ async def unzip_mirror(update, context):
     tag = reply_to.from_user.username if reply_to is not None else None
     listener = MirrorListener(context.bot, update, False, tag, True)
     if not bot_utils.is_url(link) and not bot_utils.is_magnet(link):
-        await sendMessage('No download source provided', context)
+        await sendMessage('No download source provided', context, update)
         return
     ariaDlManager.add_download(link, f'{DOWNLOAD_DIR}{listener.uid}/', listener)
     await sendStatusMessage(update, context)

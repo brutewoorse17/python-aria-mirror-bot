@@ -31,7 +31,7 @@ async def stats(update, context):
             f'Free: {free}\n' \
             f'CPU: {cpuUsage}%\n' \
             f'RAM: {memory}%'
-    await sendMessage(stats, context)
+    await sendMessage(stats, context, update)
 
 
 async def start(update, context):
@@ -39,11 +39,11 @@ async def start(update, context):
 This is a bot which can mirror all your links to Google drive!
 Type /{BotCommands.HelpCommand} to get a list of available commands
 '''
-    await sendMessage(start_string, context)
+    await sendMessage(start_string, context, update)
 
 
 async def restart(update, context):
-    restart_message = await sendMessage("Restarting, Please wait!", context)
+    restart_message = await sendMessage("Restarting, Please wait!", context, update)
     # Save restart message object in order to reply to it after restarting
     fs_utils.clean_all()
     with open('restart.pickle', 'wb') as status:
@@ -53,13 +53,13 @@ async def restart(update, context):
 
 async def ping(update, context):
     start_time = int(round(time.time() * 1000))
-    reply = await sendMessage("Starting Ping", context)
+    reply = await sendMessage("Starting Ping", context, update)
     end_time = int(round(time.time() * 1000))
     await editMessage(f'{end_time - start_time} ms', reply, context)
 
 
 async def log(update, context):
-    await sendLogFile(context)
+    await sendLogFile(context, update)
 
 
 async def bot_help(update, context):
@@ -91,7 +91,7 @@ async def bot_help(update, context):
 /{BotCommands.TgUploadCommand} [download_url] (or reply to a file): Download and upload the file back to Telegram
 
 '''
-    await sendMessage(help_string, context)
+    await sendMessage(help_string, context, update)
 
 
 def main():

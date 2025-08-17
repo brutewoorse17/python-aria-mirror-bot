@@ -16,14 +16,14 @@ async def list_drive(update, context):
     args = update.message.text.split(' ')
     search = ' '.join(args[1:]).strip()
     if not search:
-        reply_message = await sendMessage('No search term provided', context)
+        reply_message = await sendMessage('No search term provided', context, update)
         threading.Thread(target=auto_delete_message, args=(context.bot, update.message, reply_message)).start()
         return
     LOGGER.info(f"Searching: {search}")
     gdrive = GoogleDriveHelper()
     msg = gdrive.drive_list(search)
     if not msg:
-        reply_message = await sendMessage('No result found', context)
+        reply_message = await sendMessage('No result found', context, update)
         threading.Thread(target=auto_delete_message, args=(context.bot, update.message, reply_message)).start()
         return
     lines = [ln.strip() for ln in msg.strip().split('\n') if ln.strip()]
@@ -42,12 +42,12 @@ async def list_drive(update, context):
         try:
             page = telegraph.create_page(title=f"Results: {search}", html_content=html_content)
             url = "https://telegra.ph/" + page["path"]
-            reply_message = await sendMessage(f'<a href="{url}">Telegraph page</a>', context)
+            reply_message = await sendMessage(f'<a href="{url}">Telegraph page</a>', context, update)
         except Exception as e:
             LOGGER.error(str(e))
-            reply_message = await sendMessage(msg, context)
+            reply_message = await sendMessage(msg, context, update)
     else:
-        reply_message = await sendMessage(msg, context)
+        reply_message = await sendMessage(msg, context, update)
     threading.Thread(target=auto_delete_message, args=(context.bot, update.message, reply_message)).start()
 
 

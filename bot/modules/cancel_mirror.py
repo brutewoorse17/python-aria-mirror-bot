@@ -17,7 +17,7 @@ async def cancel_mirror(update, context):
         gid = args[1]
         dl = getDownloadByGid(gid)
         if not dl:
-            await sendMessage(f"GID: <code>{gid}</code> not found.", context)
+            await sendMessage(f"GID: <code>{gid}</code> not found.", context, update)
             return
         with download_dict_lock:
             keys = list(download_dict.keys())
@@ -32,17 +32,17 @@ async def cancel_mirror(update, context):
             if BotCommands.MirrorCommand in mirror_message.text or \
                     BotCommands.TarMirrorCommand in mirror_message.text:
                 msg = "Mirror already have been cancelled"
-                await sendMessage(msg, context)
+                await sendMessage(msg, context, update)
                 return
             else:
                 msg = "Please reply to the /mirror message which was used to start the download or /cancel gid to cancel it!"
-                await sendMessage(msg, context)
+                await sendMessage(msg, context, update)
                 return
     if dl.status() == "Uploading":
-        await sendMessage("Upload in Progress, Don't Cancel it.", context)
+        await sendMessage("Upload in Progress, Don't Cancel it.", context, update)
         return
     elif dl.status() == "Archiving":
-        await sendMessage("Archival in Progress, Don't Cancel it.", context)
+        await sendMessage("Archival in Progress, Don't Cancel it.", context, update)
         return
     else:
         dl.download().cancel_download()
@@ -59,7 +59,7 @@ async def cancel_all(update, context):
                 dlDetails.download().cancel_download()
                 count += 1
     delete_all_messages()
-    await sendMessage(f'Cancelled {count} downloads!', context)
+    await sendMessage(f'Cancelled {count} downloads!', context, update)
 
 
 cancel_mirror_handler = CommandHandler(BotCommands.CancelMirror, cancel_mirror,

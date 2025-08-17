@@ -9,10 +9,17 @@ from bot import bot
 from bot import application
 
 
-async def sendMessage(text: str, context):
+async def sendMessage(text: str, context, update: Update = None):
     try:
-        return await context.bot.send_message(context._update.effective_chat.id,
-                            reply_to_message_id=context._update.effective_message.message_id,
+        if update is None:
+            # Fallback to context data if available (PTB v21 ContextTypes.DEFAULT_TYPE)
+            chat_id = getattr(getattr(context, 'chat_data', None), 'id', None) or getattr(getattr(context, 'chat', None), 'id', None)
+            message_id = None
+        else:
+            chat_id = update.effective_chat.id
+            message_id = update.effective_message.message_id
+        return await context.bot.send_message(chat_id,
+                            reply_to_message_id=message_id,
                             text=text, parse_mode='HTMl')
     except Exception as e:
         LOGGER.error(str(e))
@@ -35,11 +42,15 @@ async def deleteMessage(context, message: Message):
         LOGGER.error(str(e))
 
 
-async def sendLogFile(context):
+async def sendLogFile(context, update: Update = None):
     with open('log.txt', 'rb') as f:
-        await context.bot.send_document(document=f, filename=f.name,
-                          reply_to_message_id=context._update.effective_message.message_id,
-                          chat_id=context._update.effective_chat.id)
+        if update is not None:
+            await context.bot.send_document(document=f, filename=f.name,
+                              reply_to_message_id=update.effective_message.message_id,
+                              chat_id=update.effective_chat.id)
+        else:
+            await application.bot.send_document(document=f, filename=f.name,
+                              chat_id=update.effective_chat.id)
 
 
 async def _async_send_message(chat_id, reply_to_message_id, text, parse_mode='HTMl'):
@@ -101,5 +112,5 @@ async def sendStatusMessage(msg, context):
             except Exception as e:
                 LOGGER.error(str(e))
                 del status_reply_dict[msg.message.chat.id]
-        message = await sendMessage(progress, context)
+        message = await sendMessage(progress, context, update=msg)
         status_reply_dict[msg.message.chat.id] = message
