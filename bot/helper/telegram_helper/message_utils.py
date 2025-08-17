@@ -2,11 +2,10 @@ from telegram import Message
 from telegram import Update
 import time
 from bot import AUTO_DELETE_MESSAGE_DURATION, LOGGER, bot, \
-    status_reply_dict, status_reply_dict_lock
+    status_reply_dict, status_reply_dict_lock, application
 from bot.helper.ext_utils.bot_utils import get_readable_message
 from telegram.error import TimedOut, BadRequest
-from bot import bot
-from bot import application
+import asyncio
 
 
 async def sendMessage(text: str, context, update: Update = None):
@@ -54,54 +53,120 @@ async def sendLogFile(context, update: Update = None):
                               chat_id=update.effective_chat.id)
 
 
-async def _async_send_message(chat_id, reply_to_message_id, text, parse_mode='HTMl'):
-    try:
-        await application.bot.send_message(chat_id, reply_to_message_id=reply_to_message_id, text=text, parse_mode=parse_mode)
-    except Exception as e:
-        LOGGER.error(str(e))
-
-
 def send_message_async(chat_id, reply_to_message_id, text, parse_mode='HTMl'):
-    application.create_task(_async_send_message(chat_id, reply_to_message_id, text, parse_mode))
+    # Create a coroutine for sending the message
+    async def send_message():
+        try:
+            await application.bot.send_message(chat_id, reply_to_message_id=reply_to_message_id, text=text, parse_mode=parse_mode)
+        except Exception as e:
+            LOGGER.error(f"Error sending message: {e}")
+    
+    # Schedule the coroutine
+    _schedule_coroutine(send_message())
 
 
 def auto_delete_message(cmd_message: Message, bot_message: Message):
     if AUTO_DELETE_MESSAGE_DURATION != -1:
         time.sleep(AUTO_DELETE_MESSAGE_DURATION)
         try:
+            # Create coroutines for deleting messages
+            async def delete_cmd_message():
+                try:
+                    await application.bot.delete_message(chat_id=cmd_message.chat.id, message_id=cmd_message.message_id)
+                except Exception as e:
+                    LOGGER.error(f"Error deleting cmd message: {e}")
+            
+            async def delete_bot_message():
+                try:
+                    await application.bot.delete_message(chat_id=bot_message.chat.id, message_id=bot_message.message_id)
+                except Exception as e:
+                    LOGGER.error(f"Error deleting bot message: {e}")
+            
+            # Schedule the coroutines
             if cmd_message:
-                application.create_task(application.bot.delete_message(chat_id=cmd_message.chat.id, message_id=cmd_message.message_id))
+                _schedule_coroutine(delete_cmd_message())
             if bot_message:
-                application.create_task(application.bot.delete_message(chat_id=bot_message.chat.id, message_id=bot_message.message_id))
+                _schedule_coroutine(delete_bot_message())
         except Exception as e:
             LOGGER.error(str(e))
 
 
 def delete_all_messages():
     with status_reply_dict_lock:
-        for message in list(status_reply_dict.values()):
+        for chat_id in list(status_reply_dict.keys()):
             try:
-                if not message or not getattr(message, 'chat', None):
+                if not status_reply_dict[chat_id]:
                     continue
-                application.create_task(application.bot.delete_message(chat_id=message.chat.id,
-                                   message_id=message.message_id))
-                del status_reply_dict[message.chat.id]
+                message_obj, _ = status_reply_dict[chat_id]
+                if not message_obj or not getattr(message_obj, 'chat', None):
+                    continue
+                
+                # Create a coroutine for deleting the message
+                async def delete_message():
+                    try:
+                        await application.bot.delete_message(chat_id=message_obj.chat.id, message_id=message_obj.message_id)
+                    except Exception as e:
+                        LOGGER.error(f"Error deleting message: {e}")
+                
+                # Schedule the coroutine
+                _schedule_coroutine(delete_message())
+                
+                del status_reply_dict[chat_id]
             except Exception as e:
                 LOGGER.error(str(e))
 
+
+def _schedule_coroutine(coro):
+    """Helper function to schedule a coroutine in the appropriate event loop"""
+    try:
+        # Try to get the current event loop
+        loop = asyncio.get_running_loop()
+        # If we're in an event loop, create a task
+        asyncio.create_task(coro)
+    except RuntimeError:
+        # No event loop running, try to get the application's loop
+        try:
+            if hasattr(application, '_loop') and application._loop and application._loop.is_running():
+                asyncio.run_coroutine_threadsafe(coro, application._loop)
+            else:
+                # Last resort: try to create a new event loop
+                try:
+                    loop = asyncio.new_event_loop()
+                    asyncio.set_event_loop(loop)
+                    loop.run_until_complete(coro)
+                    loop.close()
+                except Exception as e:
+                    LOGGER.error(f"Could not schedule coroutine: {e}")
+        except Exception as e:
+            LOGGER.error(f"Could not access application loop: {e}")
 
 def update_all_messages():
     msg = get_readable_message()
     with status_reply_dict_lock:
         for chat_id in list(status_reply_dict.keys()):
-            if status_reply_dict[chat_id] and msg != status_reply_dict[chat_id].text:
-                try:
-                    bot.edit_message_text(text=msg, message_id=status_reply_dict[chat_id].message_id,
-                                          chat_id=status_reply_dict[chat_id].chat.id,
-                                          parse_mode='HTMl')
-                except Exception as e:
-                    LOGGER.error(str(e))
-                status_reply_dict[chat_id].text = msg
+            if status_reply_dict[chat_id]:
+                message_obj, stored_text = status_reply_dict[chat_id]
+                if msg != stored_text:
+                    try:
+                        # Create a coroutine for editing the message
+                        async def edit_message():
+                            try:
+                                await bot.edit_message_text(
+                                    text=msg, 
+                                    message_id=message_obj.message_id,
+                                    chat_id=message_obj.chat.id,
+                                    parse_mode='HTMl'
+                                )
+                            except Exception as e:
+                                LOGGER.error(f"Error editing message: {e}")
+                        
+                        # Schedule the coroutine
+                        _schedule_coroutine(edit_message())
+                        
+                        # Update the stored text
+                        status_reply_dict[chat_id] = (message_obj, msg)
+                    except Exception as e:
+                        LOGGER.error(str(e))
 
 
 async def sendStatusMessage(msg, context):
@@ -109,11 +174,11 @@ async def sendStatusMessage(msg, context):
     with status_reply_dict_lock:
         if msg.message.chat.id in list(status_reply_dict.keys()):
             try:
-                message = status_reply_dict[msg.message.chat.id]
-                await deleteMessage(context, message)
+                message_obj, _ = status_reply_dict[msg.message.chat.id]
+                await deleteMessage(context, message_obj)
                 del status_reply_dict[msg.message.chat.id]
             except Exception as e:
                 LOGGER.error(str(e))
                 del status_reply_dict[msg.message.chat.id]
         message = await sendMessage(progress, context, update=msg)
-        status_reply_dict[msg.message.chat.id] = message
+        status_reply_dict[msg.message.chat.id] = (message, progress)
