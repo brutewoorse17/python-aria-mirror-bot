@@ -15,6 +15,7 @@ from .helper.ext_utils.bot_utils import get_readable_file_size, get_readable_tim
 from .helper.telegram_helper.filters import CustomFilters
 from .modules import authorize, list, cancel_mirror, mirror_status, mirror, clone, watch
 from .modules import settings
+from .modules import rename
 
 
 async def stats(update, context):
@@ -90,6 +91,10 @@ async def bot_help(update, context):
 
 /{BotCommands.TgUploadCommand} [download_url] (or reply to a file): Download and upload the file back to Telegram
 
+/{BotCommands.RenameCommand} [gid] [new_name] or reply to a message with /{BotCommands.RenameCommand} [new_name]: Rename a torrent download
+
+/{BotCommands.ListTorrentsCommand}: List all active torrent downloads
+
 '''
     await sendMessage(help_string, context)
 
@@ -118,6 +123,12 @@ def main():
     # Register Telegram upload command handler
     from .modules.tg_upload import tg_upload_handler
     app.add_handler(tg_upload_handler)
+    # Register rename command handler
+    from .modules.rename import rename_handler
+    app.add_handler(rename_handler)
+    # Register list torrents command handler
+    from .modules.rename import list_torrents_handler
+    app.add_handler(list_torrents_handler)
 
     app.run_polling()
     LOGGER.info("Bot Started!")

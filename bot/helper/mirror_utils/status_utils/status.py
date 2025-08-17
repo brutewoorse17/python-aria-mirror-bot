@@ -38,3 +38,11 @@ class Status:
     def processed_bytes(self):
         """:return The size of file that has been processed (downloaded/uploaded/archived)"""
         raise NotImplementedError
+
+    def is_torrent(self):
+        """:return True if the download is a torrent, False otherwise"""
+        return False
+
+    def rename_torrent(self, new_name: str) -> bool:
+        """:return True if rename was successful, False otherwise"""
+        return False

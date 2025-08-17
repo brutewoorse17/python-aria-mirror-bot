@@ -33,4 +33,11 @@ class ExtractStatus(Status):
         return MirrorStatus.STATUS_EXTRACTING
 
     def processed_bytes(self):
-        return 0
+        return self.__size
+
+    def is_torrent(self):
+        return False
+
+    def rename_torrent(self, new_name: str) -> bool:
+        """Extract status doesn't support torrent renaming"""
+        return False

@@ -93,6 +93,10 @@ class AriaDownloadStatus(Status):
         self.__update()
         return self.__gid
 
+    def is_torrent(self):
+        """Check if this download is a torrent"""
+        return self.aria_download().is_torrent
+
     def cancel_download(self):
         LOGGER.info(f"Cancelling Download: {self.name()}")
         download = self.aria_download()
@@ -104,4 +108,45 @@ class AriaDownloadStatus(Status):
             downloads = aria2.get_downloads(download.followed_by_ids)
             aria2.pause(downloads)
         aria2.pause([download])
+
+    def rename_torrent(self, new_name: str) -> bool:
+        """Rename the torrent download by changing the download directory"""
+        try:
+            from bot import aria2
+            # For torrents, we need to change the download directory to effectively rename
+            # Check if this is a torrent download
+            if not self.is_torrent():
+                return False
+            
+            # Check if the download is still active and can be renamed
+            download = self.aria_download()
+            if download.has_failed or download.is_paused:
+                return False
+            
+            # Get current directory
+            current_dir = download.dir
+            if not current_dir:
+                return False
+            
+            # Create new directory path with new name
+            import os
+            parent_dir = os.path.dirname(current_dir)
+            new_dir = os.path.join(parent_dir, new_name)
+            
+            # Change the directory option to rename the torrent
+            aria2.changeOption(self.__gid, {"dir": new_dir})
+            
+            # Verify the change was successful
+            import time
+            time.sleep(0.5)  # Give aria2 time to process the change
+            updated_download = self.aria_download()
+            if updated_download.dir == new_dir:
+                LOGGER.info(f"Successfully renamed torrent {self.name()} to {new_name}")
+                return True
+            else:
+                LOGGER.warning(f"Rename operation may not have been successful")
+                return False
+        except Exception as e:
+            LOGGER.error(f"Failed to rename torrent: {e}")
+            return False
 

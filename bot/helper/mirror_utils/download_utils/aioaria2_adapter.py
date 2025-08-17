@@ -108,6 +108,11 @@ class _AioAria2Download:
 		self._update()
 		return int(self._last_status.get("numSeeders", 0))
 
+	@property
+	def dir(self) -> str:
+		self._update()
+		return self._last_status.get("dir", "")
+
 
 class AioAria2API:
 	def __init__(self, rpc_url: str, token: Optional[str] = None):
@@ -194,3 +199,10 @@ class AioAria2API:
 				self._run(self._http.remove(gid))
 			except Exception:
 				pass
+
+	def changeOption(self, gid: str, options: Dict[str, Any]) -> None:
+		"""Change options for a download"""
+		try:
+			self._run(self._http.changeOption(gid, options))
+		except Exception:
+			pass

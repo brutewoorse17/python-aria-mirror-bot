@@ -56,3 +56,11 @@ class YoutubeDLDownloadStatus(Status):
 
     def download(self):
         return self.obj
+
+    def is_torrent(self):
+        """YouTube-DL downloads are not torrents"""
+        return False
+
+    def rename_torrent(self, new_name: str) -> bool:
+        """YouTube-DL downloads don't support torrent renaming"""
+        return False

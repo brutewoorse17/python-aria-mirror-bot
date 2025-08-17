@@ -14,7 +14,14 @@ class UploadStatus(Status):
         return f"{DOWNLOAD_DIR}{self.uid}"
 
     def processed_bytes(self):
-        return self.obj.uploaded_bytes
+        return self.__size
+
+    def is_torrent(self):
+        return False
+
+    def rename_torrent(self, new_name: str) -> bool:
+        """Upload status doesn't support torrent renaming"""
+        return False
 
     def size_raw(self):
         return self.__size

@@ -20,5 +20,9 @@ class _BotCommands:
         self.TarWatchCommand = 'tarwatch'
         # Added Telegram upload command
         self.TgUploadCommand = 'tgupload'
+        # Added rename command for torrents
+        self.RenameCommand = 'rename'
+        # Added list torrents command
+        self.ListTorrentsCommand = 'torrents'
 
 BotCommands = _BotCommands()

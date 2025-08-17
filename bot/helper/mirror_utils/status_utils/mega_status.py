@@ -54,3 +54,11 @@ class MegaDownloadStatus(Status):
 
     def download(self):
         return self.obj
+
+    def is_torrent(self):
+        """Mega downloads are not torrents"""
+        return False
+
+    def rename_torrent(self, new_name: str) -> bool:
+        """Mega downloads don't support torrent renaming"""
+        return False
