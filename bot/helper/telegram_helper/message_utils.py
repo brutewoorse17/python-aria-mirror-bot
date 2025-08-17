@@ -8,6 +8,9 @@ from telegram.error import TimedOut, BadRequest
 from bot import bot
 from bot import application
 
+# Cache last sent status text per chat to avoid redundant edits
+_last_status_text: dict = {}
+
 
 async def sendMessage(text: str, context, update: Update = None):
     try:
@@ -65,6 +68,13 @@ def send_message_async(chat_id, reply_to_message_id, text, parse_mode='HTMl'):
     application.create_task(_async_send_message(chat_id, reply_to_message_id, text, parse_mode))
 
 
+async def _async_edit_message(chat_id, message_id, text, parse_mode='HTMl'):
+    try:
+        await application.bot.edit_message_text(chat_id=chat_id, message_id=message_id, text=text, parse_mode=parse_mode)
+    except Exception as e:
+        LOGGER.error(str(e))
+
+
 def auto_delete_message(cmd_message: Message, bot_message: Message):
     if AUTO_DELETE_MESSAGE_DURATION != -1:
         time.sleep(AUTO_DELETE_MESSAGE_DURATION)
@@ -86,6 +96,7 @@ def delete_all_messages():
                 application.create_task(application.bot.delete_message(chat_id=message.chat.id,
                                    message_id=message.message_id))
                 del status_reply_dict[message.chat.id]
+                _last_status_text.pop(message.chat.id, None)
             except Exception as e:
                 LOGGER.error(str(e))
 
@@ -94,14 +105,16 @@ def update_all_messages():
     msg = get_readable_message()
     with status_reply_dict_lock:
         for chat_id in list(status_reply_dict.keys()):
-            if status_reply_dict[chat_id] and msg != status_reply_dict[chat_id].text:
-                try:
-                    bot.edit_message_text(text=msg, message_id=status_reply_dict[chat_id].message_id,
-                                          chat_id=status_reply_dict[chat_id].chat.id,
-                                          parse_mode='HTMl')
-                except Exception as e:
-                    LOGGER.error(str(e))
-                status_reply_dict[chat_id].text = msg
+            message = status_reply_dict.get(chat_id)
+            if not message:
+                continue
+            if _last_status_text.get(chat_id) == msg:
+                continue
+            try:
+                application.create_task(_async_edit_message(chat_id=message.chat.id, message_id=message.message_id, text=msg, parse_mode='HTMl'))
+                _last_status_text[chat_id] = msg
+            except Exception as e:
+                LOGGER.error(str(e))
 
 
 async def sendStatusMessage(msg, context):
@@ -117,3 +130,4 @@ async def sendStatusMessage(msg, context):
                 del status_reply_dict[msg.message.chat.id]
         message = await sendMessage(progress, context, update=msg)
         status_reply_dict[msg.message.chat.id] = message
+        _last_status_text[msg.message.chat.id] = progress
