@@ -1,23 +1,22 @@
 #!/usr/bin/env bash
-set -e
+set -euo pipefail
 
 VENV_DIR="${VENV_DIR:-.venv}"
+export PIP_REQUIRE_VIRTUALENV=true
 
-use_venv=false
-if [ -d "$VENV_DIR" ]; then
-	use_venv=true
-elif python3 -c "import venv" >/dev/null 2>&1; then
-	use_venv=true
+# Ensure venv exists
+if [ ! -d "$VENV_DIR" ]; then
+	python3 -m venv "$VENV_DIR" || {
+		echo "Failed to create virtualenv at $VENV_DIR. Please install python3-venv and retry." >&2
+		exit 1
+	}
 fi
 
-if [ "$use_venv" = true ]; then
-	if [ ! -d "$VENV_DIR" ]; then
-		python3 -m venv "$VENV_DIR"
-	fi
-	. "$VENV_DIR/bin/activate"
-	pip install --upgrade pip
-	pip install -r requirements.txt
-fi
+# Activate venv and install deps strictly inside it
+. "$VENV_DIR/bin/activate"
+"$VENV_DIR/bin/python" -m pip install --upgrade pip
+"$VENV_DIR/bin/python" -m pip install -r requirements.txt
 
+# Start aria2 and the bot using venv python
 ./aria.sh
-python -m bot
+exec "$VENV_DIR/bin/python" -m bot
