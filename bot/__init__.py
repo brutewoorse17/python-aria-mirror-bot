@@ -45,6 +45,25 @@ aria2 = AioAria2API(
 	token=""
 )
 
+# Initialize aria2 client
+def init_aria2():
+    try:
+        # Test aria2 connection with proper POST request
+        import requests
+        response = requests.post("http://localhost:6800/jsonrpc", 
+                               json={"jsonrpc":"2.0","id":"test","method":"aria2.getVersion","params":[]},
+                               timeout=5)
+        if response.status_code == 200:
+            LOGGER.info("aria2 daemon is running and accessible")
+        else:
+            LOGGER.warning(f"aria2 daemon responded with status {response.status_code}")
+    except Exception as e:
+        LOGGER.error(f"Failed to connect to aria2 daemon: {e}")
+        LOGGER.error("Make sure aria2 is running with: ./aria.sh")
+
+# Initialize aria2 on startup
+init_aria2()
+
 DOWNLOAD_DIR = None
 BOT_TOKEN = None
 
