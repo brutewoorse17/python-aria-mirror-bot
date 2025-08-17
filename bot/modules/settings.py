@@ -1,12 +1,14 @@
 from telegram import InlineKeyboardButton, InlineKeyboardMarkup
-from telegram.ext import CommandHandler, CallbackQueryHandler
+from telegram.ext import CommandHandler, CallbackQueryHandler, MessageHandler, filters
 import bot
 from bot import application, LOGGER
 from bot.helper.telegram_helper.filters import CustomFilters
+import os
 
 
 def _settings_text() -> str:
 	index_url = bot.INDEX_URL if bot.INDEX_URL else 'None'
+	token_status = 'Present' if os.path.exists('token.pickle') else 'Missing'
 	thumb = bot.VIDEO_THUMB_PATH if bot.VIDEO_THUMB_PATH else 'None'
 	return (
 		"<b>Bot Settings</b>\n\n"
@@ -18,6 +20,7 @@ def _settings_text() -> str:
 		f"Upload as Video: <code>{bot.UPLOAD_AS_VIDEO}</code>\n"
 		f"Use Custom Thumb: <code>{bot.USE_CUSTOM_THUMB}</code>\n"
 		f"Thumb Path: <code>{thumb}</code>\n"
+		f"Drive token.pickle: <code>{token_status}</code>\n"
 	)
 
 
@@ -56,6 +59,9 @@ def _settings_keyboard() -> InlineKeyboardMarkup:
 				f"Use Custom Thumb: {'ON' if bot.USE_CUSTOM_THUMB else 'OFF'}",
 				callback_data="settings:toggle_thumb",
 			)
+		],
+		[
+			InlineKeyboardButton("Upload token.pickle", callback_data="settings:upload_token"),
 		],
 		[
 			InlineKeyboardButton("Refresh", callback_data="settings:refresh"),
@@ -107,6 +113,13 @@ async def settings_callback(update, context):
 			bot.UPLOAD_AS_VIDEO = not bot.UPLOAD_AS_VIDEO
 		elif data == "settings:toggle_thumb":
 			bot.USE_CUSTOM_THUMB = not bot.USE_CUSTOM_THUMB
+		elif data == "settings:upload_token":
+			bot.WAITING_FOR_TOKEN_PICKLE = True
+			await query.edit_message_text(
+				text="Please send token.pickle as a document in this chat (owner only).",
+				parse_mode='HTML', reply_markup=_settings_keyboard()
+			)
+			return
 		# refresh or after any change
 		await query.edit_message_text(
 			text=_settings_text(), parse_mode='HTML', reply_markup=_settings_keyboard()
@@ -118,7 +131,32 @@ async def settings_callback(update, context):
 		)
 
 
+async def _handle_token_upload(update, context):
+	if update.effective_user.id != bot.OWNER_ID:
+		return
+	if not getattr(bot, 'WAITING_FOR_TOKEN_PICKLE', False):
+		return
+	doc = update.effective_message.document if update.effective_message else None
+	if not doc:
+		return
+	file_name = doc.file_name or ''
+	if not file_name.endswith('.pickle'):
+		await context.bot.send_message(chat_id=update.effective_chat.id,
+									  reply_to_message_id=update.effective_message.message_id,
+									  text='Please upload a .pickle file named token.pickle', parse_mode='HTML')
+		return
+	# download file
+	file = await context.bot.get_file(doc.file_id)
+	await file.download_to_drive(custom_path='token.pickle')
+	bot.WAITING_FOR_TOKEN_PICKLE = False
+	await context.bot.send_message(chat_id=update.effective_chat.id,
+								  reply_to_message_id=update.effective_message.message_id,
+								  text='token.pickle saved. You can now use Google Drive without re-auth.', parse_mode='HTML')
+
+
 settings_handler = CommandHandler('settings', show_settings, filters=CustomFilters.owner_filter)
 settings_cb_handler = CallbackQueryHandler(settings_callback, pattern=r"^settings:")
+settings_token_handler = MessageHandler(filters.Document.ALL & CustomFilters.owner_filter, _handle_token_upload)
 application.add_handler(settings_handler)
 application.add_handler(settings_cb_handler)
+application.add_handler(settings_token_handler)

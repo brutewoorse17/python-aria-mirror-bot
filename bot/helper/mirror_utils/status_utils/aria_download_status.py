@@ -21,6 +21,7 @@ class AriaDownloadStatus(Status):
         self.last = None
         self.is_waiting = False
         self.is_extracting = False
+        self.cancelled_by_user = False
 
     def __update(self):
         self.__download = get_download(self.__gid)
@@ -95,6 +96,7 @@ class AriaDownloadStatus(Status):
 
     def cancel_download(self):
         LOGGER.info(f"Cancelling Download: {self.name()}")
+        self.cancelled_by_user = True
         download = self.aria_download()
         if download.is_waiting:
             aria2.remove([download])
