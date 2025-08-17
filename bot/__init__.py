@@ -55,7 +55,7 @@ bot = None
 download_dict_lock = threading.Lock()
 status_reply_dict_lock = threading.Lock()
 # Key: update.effective_chat.id
-# Value: telegram.Message
+# Value: tuple of (telegram.Message, text) to allow text comparison
 status_reply_dict = {}
 # Key: update.message.message_id
 # Value: An object of Status
