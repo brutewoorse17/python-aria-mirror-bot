@@ -147,6 +147,20 @@ class TgUploadListener(listeners.MirrorListeners):
         pass
 
     def onUploadComplete(self, _link: str):
+        # Capture uploaded file name before clearing status
+        try:
+            with download_dict_lock:
+                uploaded_name = None
+                try:
+                    status = download_dict.get(self.uid)
+                    if status is not None:
+                        uploaded_name = status.name()
+                except Exception:
+                    uploaded_name = None
+            if not uploaded_name:
+                uploaded_name = 'file'
+        except Exception:
+            uploaded_name = 'file'
         with download_dict_lock:
             try:
                 fs_utils.clean_download(f'{DOWNLOAD_DIR}{self.uid}')
@@ -157,7 +171,7 @@ class TgUploadListener(listeners.MirrorListeners):
             except KeyError:
                 pass
             count = len(download_dict)
-        msg = f"Uploaded to Telegram: {name}"
+        msg = f"Uploaded to Telegram: {uploaded_name}"
         if self.tag is not None:
             msg += f'\ncc: @{self.tag}'
         from bot.helper.telegram_helper.message_utils import send_message_async
