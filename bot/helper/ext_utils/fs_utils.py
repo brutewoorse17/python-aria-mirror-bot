@@ -22,7 +22,24 @@ def start_cleanup():
 
 
 def clean_all():
-    aria2.remove_all(True)
+    try:
+        # Try to remove all downloads if the method exists
+        if hasattr(aria2, 'remove_all'):
+            aria2.remove_all(True)
+        else:
+            # Fallback: try to get and remove downloads individually
+            try:
+                downloads = aria2.get_downloads()
+                for download in downloads:
+                    try:
+                        aria2.remove([download.gid])
+                    except Exception as e:
+                        LOGGER.warning(f"Could not remove download {download.gid}: {e}")
+            except Exception as e:
+                LOGGER.warning(f"Could not get downloads for cleanup: {e}")
+    except Exception as e:
+        LOGGER.warning(f"Error during aria2 cleanup: {e}")
+    
     try:
         shutil.rmtree(DOWNLOAD_DIR)
     except FileNotFoundError:
