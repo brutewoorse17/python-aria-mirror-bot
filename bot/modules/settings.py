@@ -4,6 +4,7 @@ import bot
 from bot import application, LOGGER
 from bot.helper.telegram_helper.filters import CustomFilters
 import os
+from telegram.error import BadRequest
 
 
 def _settings_text() -> str:
@@ -89,46 +90,67 @@ async def settings_callback(update, context):
 	await query.answer()
 	data = query.data or ""
 	try:
+		prev_text = query.message.text or ""
+		prev_markup = query.message.reply_markup
+		changed = False
 		if data == "settings:toggle_teamdrive":
 			bot.IS_TEAM_DRIVE = not bot.IS_TEAM_DRIVE
+			changed = True
 		elif data == "settings:toggle_sa":
 			bot.USE_SERVICE_ACCOUNTS = not bot.USE_SERVICE_ACCOUNTS
+			changed = True
 		elif data == "settings:dsui_inc":
 			bot.DOWNLOAD_STATUS_UPDATE_INTERVAL = max(1, bot.DOWNLOAD_STATUS_UPDATE_INTERVAL + 1)
+			changed = True
 		elif data == "settings:dsui_dec":
 			bot.DOWNLOAD_STATUS_UPDATE_INTERVAL = max(1, bot.DOWNLOAD_STATUS_UPDATE_INTERVAL - 1)
+			changed = True
 		elif data == "settings:ad_inc":
 			if bot.AUTO_DELETE_MESSAGE_DURATION == -1:
 				bot.AUTO_DELETE_MESSAGE_DURATION = 20
 			else:
 				bot.AUTO_DELETE_MESSAGE_DURATION = min(3600, bot.AUTO_DELETE_MESSAGE_DURATION + 5)
+			changed = True
 		elif data == "settings:ad_dec":
 			if bot.AUTO_DELETE_MESSAGE_DURATION == -1:
 				bot.AUTO_DELETE_MESSAGE_DURATION = 20
 			else:
 				bot.AUTO_DELETE_MESSAGE_DURATION = max(0, bot.AUTO_DELETE_MESSAGE_DURATION - 5)
+			changed = True
 		elif data == "settings:ad_toggle":
 			bot.AUTO_DELETE_MESSAGE_DURATION = -1 if bot.AUTO_DELETE_MESSAGE_DURATION != -1 else 20
+			changed = True
 		elif data == "settings:toggle_upload_video":
 			bot.UPLOAD_AS_VIDEO = not bot.UPLOAD_AS_VIDEO
+			changed = True
 		elif data == "settings:toggle_thumb":
 			bot.USE_CUSTOM_THUMB = not bot.USE_CUSTOM_THUMB
+			changed = True
 		elif data == "settings:upload_token":
 			bot.WAITING_FOR_TOKEN_PICKLE = True
-			await query.edit_message_text(
-				text="Please send token.pickle as a document in this chat (owner only).",
-				parse_mode='HTML', reply_markup=_settings_keyboard()
-			)
+			new_text = "Please send token.pickle as a document in this chat (owner only)."
+			try:
+				if new_text != prev_text:
+					await query.edit_message_text(text=new_text, parse_mode='HTML', reply_markup=_settings_keyboard())
+			except BadRequest as br:
+				LOGGER.error(str(br))
 			return
-		# refresh or after any change
-		await query.edit_message_text(
-			text=_settings_text(), parse_mode='HTML', reply_markup=_settings_keyboard()
-		)
+		# refresh only if changed or explicit refresh
+		if changed or data == "settings:refresh":
+			new_text = _settings_text()
+			try:
+				if new_text != prev_text:
+					await query.edit_message_text(text=new_text, parse_mode='HTML', reply_markup=_settings_keyboard())
+			except BadRequest as br:
+				LOGGER.error(str(br))
 	except Exception as e:
 		LOGGER.error(str(e))
-		await query.edit_message_text(
-			text=_settings_text(), parse_mode='HTML', reply_markup=_settings_keyboard()
-		)
+		try:
+			await query.edit_message_text(
+				text=_settings_text(), parse_mode='HTML', reply_markup=_settings_keyboard()
+			)
+		except BadRequest as br:
+			LOGGER.error(str(br))
 
 
 async def _handle_token_upload(update, context):
