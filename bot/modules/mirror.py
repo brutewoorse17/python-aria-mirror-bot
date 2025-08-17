@@ -22,6 +22,28 @@ import pathlib
 import os
 import subprocess
 import threading
+import re
+
+
+def validate_filename(filename):
+    """Validate custom filename for invalid characters"""
+    if not filename or len(filename.strip()) == 0:
+        return False, "Filename cannot be empty"
+    
+    # Remove or replace invalid characters for file/directory names
+    invalid_chars = r'[<>:"/\\|?*]'
+    if re.search(invalid_chars, filename):
+        return False, "Filename contains invalid characters: < > : \" / \\ | ? *"
+    
+    if len(filename) > 255:
+        return False, "Filename is too long (max 255 characters)"
+    
+    # Check for reserved names on some filesystems
+    reserved_names = ['CON', 'PRN', 'AUX', 'NUL', 'COM1', 'COM2', 'COM3', 'COM4', 'COM5', 'COM6', 'COM7', 'COM8', 'COM9', 'LPT1', 'LPT2', 'LPT3', 'LPT4', 'LPT5', 'LPT6', 'LPT7', 'LPT8', 'LPT9']
+    if filename.upper() in reserved_names:
+        return False, f"Filename '{filename}' is a reserved system name"
+    
+    return True, ""
 
 ariaDlManager = AriaDownloadHelper()
 ariaDlManager.start_listener()
@@ -33,6 +55,7 @@ class MirrorListener(listeners.MirrorListeners):
         self.isTar = isTar
         self.tag = tag
         self.extract = extract
+        self.custom_filename = None  # Add support for custom filenames
 
     def onDownloadStarted(self):
         pass
@@ -186,6 +209,26 @@ async def mirror(update, context):
         link = ''
     LOGGER.info(link)
     link = link.strip()
+    
+    # Check for custom filename
+    custom_filename = None
+    if len(message_args) > 2:
+        # Check if the second argument is a URL/magnet link
+        if bot_utils.is_url(message_args[2]) or bot_utils.is_magnet(message_args[2]):
+            # Format: /mirror <filename> <link>
+            custom_filename = message_args[1]
+            link = message_args[2]
+        else:
+            # Format: /mirror <link> <filename>
+            custom_filename = ' '.join(message_args[2:])
+        
+        # Validate custom filename
+        if custom_filename:
+            is_valid, error_msg = validate_filename(custom_filename)
+            if not is_valid:
+                await sendMessage(f"❌ Invalid filename: {error_msg}", context)
+                return
+    
     reply_to = update.message.reply_to_message
     if reply_to is not None:
         file = None
@@ -208,6 +251,10 @@ async def mirror(update, context):
                     return
                 else:
                     link = file.get_file().file_path
+                    # For torrent files, use custom filename if provided
+                    if custom_filename:
+                        listener = MirrorListener(context.bot, update, False, tag, False)
+                        listener.custom_filename = custom_filename
     else:
         tag = None
     if not bot_utils.is_url(link) and not bot_utils.is_magnet(link):
@@ -218,34 +265,93 @@ async def mirror(update, context):
         link = direct_link_generator(link)
     except DirectDownloadLinkException as e:
         LOGGER.info(f'{link}: {e}')
+    
     listener = MirrorListener(context.bot, update, False, tag, False)
+    if custom_filename:
+        listener.custom_filename = custom_filename
+    
     if bot_utils.is_mega_link(link) and MEGA_KEY is not None:
         mega_dl = MegaDownloader(listener)
         mega_dl.add_download(link, f'{DOWNLOAD_DIR}{listener.uid}/')
     else:
-        ariaDlManager.add_download(link, f'{DOWNLOAD_DIR}{listener.uid}/', listener)
+        ariaDlManager.add_download(link, f'{DOWNLOAD_DIR}{listener.uid}/', listener, custom_filename)
     await sendStatusMessage(update, context)
     if len(Interval) == 0:
         Interval.append(setInterval(DOWNLOAD_STATUS_UPDATE_INTERVAL, update_all_messages))
 
 
 async def tar_mirror(update, context):
+    # Extract custom filename and link from arguments
+    message_args = update.message.text.split(' ')
+    custom_filename = None
+    link = ''
+    
+    if len(message_args) > 2:
+        # Check if the second argument is a URL/magnet link
+        if bot_utils.is_url(message_args[2]) or bot_utils.is_magnet(message_args[2]):
+            # Format: /tarmirror <filename> <link>
+            custom_filename = message_args[1]
+            link = message_args[2]
+        else:
+            # Format: /tarmirror <link> <filename>
+            custom_filename = ' '.join(message_args[2:])
+            link = message_args[1]
+        
+        # Validate custom filename
+        if custom_filename:
+            is_valid, error_msg = validate_filename(custom_filename)
+            if not is_valid:
+                await sendMessage(f"❌ Invalid filename: {error_msg}", context)
+                return
+    elif len(message_args) > 1:
+        link = message_args[1]
+    
+    # Create a modified update object with the link
+    if link:
+        update.message.text = f"/mirror {link}"
+        if custom_filename:
+            update.message.text += f" {custom_filename}"
+    
     await mirror(update, context)
 
 
 async def unzip_mirror(update, context):
     message_args = update.message.text.split(' ')
-    try:
+    custom_filename = None
+    link = ''
+    
+    if len(message_args) > 2:
+        # Check if the second argument is a URL/magnet link
+        if bot_utils.is_url(message_args[2]) or bot_utils.is_magnet(message_args[2]):
+            # Format: /unzipmirror <filename> <link>
+            custom_filename = message_args[1]
+            link = message_args[2]
+        else:
+            # Format: /unzipmirror <link> <filename>
+            custom_filename = ' '.join(message_args[2:])
+            link = message_args[1]
+        
+        # Validate custom filename
+        if custom_filename:
+            is_valid, error_msg = validate_filename(custom_filename)
+            if not is_valid:
+                await sendMessage(f"❌ Invalid filename: {error_msg}", context)
+                return
+    elif len(message_args) > 1:
         link = message_args[1]
-    except IndexError:
-        link = ''
+    
     reply_to = update.message.reply_to_message
     tag = reply_to.from_user.username if reply_to is not None else None
     listener = MirrorListener(context.bot, update, False, tag, True)
+    
+    if custom_filename:
+        listener.custom_filename = custom_filename
+    
     if not bot_utils.is_url(link) and not bot_utils.is_magnet(link):
         await sendMessage('No download source provided', context)
         return
-    ariaDlManager.add_download(link, f'{DOWNLOAD_DIR}{listener.uid}/', listener)
+    
+    ariaDlManager.add_download(link, f'{DOWNLOAD_DIR}{listener.uid}/', listener, custom_filename)
     await sendStatusMessage(update, context)
     if len(Interval) == 0:
         Interval.append(setInterval(DOWNLOAD_STATUS_UPDATE_INTERVAL, update_all_messages))

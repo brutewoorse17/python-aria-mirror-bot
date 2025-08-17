@@ -67,15 +67,15 @@ async def bot_help(update, context):
     help_string = f'''
 /{BotCommands.HelpCommand}: To get this message
 
-/{BotCommands.MirrorCommand} [download_url][magnet_link]: Start mirroring the link to google drive
+/{BotCommands.MirrorCommand} [link] [filename] or [filename] [link]: Start mirroring the link to google drive with optional custom filename
 
-/{BotCommands.UnzipMirrorCommand} [download_url][magnet_link] : starts mirroring and if downloaded file is any archive , extracts it to google drive
+/{BotCommands.UnzipMirrorCommand} [link] [filename] or [filename] [link] : starts mirroring and if downloaded file is any archive , extracts it to google drive with optional custom filename
 
-/{BotCommands.TarMirrorCommand} [download_url][magnet_link]: start mirroring and upload the archived (.tar) version of the download
+/{BotCommands.TarMirrorCommand} [link] [filename] or [filename] [link]: start mirroring and upload the archived (.tar) version of the download with optional custom filename
 
-/{BotCommands.WatchCommand} [youtube-dl supported link]: Mirror through youtube-dl. Click /{BotCommands.WatchCommand} for more help.
+/{BotCommands.WatchCommand} [youtube-dl supported link] [quality] [filename] or [filename] [link] [quality]: Mirror through youtube-dl with optional custom filename. Click /{BotCommands.WatchCommand} for more help.
 
-/{BotCommands.TarWatchCommand} [youtube-dl supported link]: Mirror through youtube-dl and tar before uploading
+/{BotCommands.TarWatchCommand} [youtube-dl supported link] [quality] [filename] or [filename] [link] [quality]: Mirror through youtube-dl and tar before uploading with optional custom filename
 
 /{BotCommands.CancelMirror} : Reply to the message by which the download was initiated and that download will be cancelled
 
@@ -94,6 +94,13 @@ async def bot_help(update, context):
 /{BotCommands.RenameCommand} [gid] [new_name] or reply to a message with /{BotCommands.RenameCommand} [new_name]: Rename a torrent download
 
 /{BotCommands.ListTorrentsCommand}: List all active torrent downloads
+
+📝 <b>Examples:</b>
+• <code>/{BotCommands.MirrorCommand} https://example.com/file.zip My Custom File</code>
+• <code>/{BotCommands.MirrorCommand} My Custom File https://example.com/file.zip</code>
+• <code>/{BotCommands.WatchCommand} https://youtube.com/watch?v=abc 720 My Video</code>
+• <code>/{BotCommands.WatchCommand} My Video https://youtube.com/watch?v=abc 720</code>
+• <code>/{BotCommands.RenameCommand} abc123 New Torrent Name</code>
 
 '''
     await sendMessage(help_string, context)

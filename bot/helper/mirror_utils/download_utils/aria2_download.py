@@ -65,11 +65,18 @@ class AriaDownloadHelper(DownloadHelper):
 									  on_download_stop=self.__onDownloadStopped,
 									  on_download_complete=self.__onDownloadComplete)
 
-	def add_download(self, link: str, path, listener):
+	def add_download(self, link: str, path, listener, custom_filename=None):
+		options = {'dir': path}
+		
+		# Add custom filename for torrents if provided
+		if custom_filename and hasattr(listener, 'custom_filename'):
+			options['bt-rename'] = custom_filename
+			LOGGER.info(f"Setting custom filename for torrent: {custom_filename}")
+		
 		if is_magnet(link):
-			download = aria2.add_magnet(link, {'dir': path})
+			download = aria2.add_magnet(link, options)
 		else:
-			download = aria2.add_uris([link], {'dir': path})
+			download = aria2.add_uris([link], options)
 		if getattr(download, 'error_message', None):  # no need to proceed further at this point
 			listener.onDownloadError(download.error_message)
 			return
